@@ -1,0 +1,2151 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dictoninglish</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        * { font-family: 'Rubik', sans-serif; }
+        body { user-select: none; }
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; transition: transform 0.65s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .animate-shake { animation: shake 0.4s ease-in-out; }
+
+        @keyframes popUp {
+            0% { transform: scale(0.92) translateY(8px); opacity: 0; }
+            70% { transform: scale(1.02) translateY(-2px); opacity: 1; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .animate-pop-up { animation: popUp 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        @keyframes fadeSlideIn {
+            0% { opacity: 0; transform: translateY(10px) scale(0.99); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .animate-tab-in { animation: fadeSlideIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+        .animate-float { animation: floatSlow 3s ease-in-out infinite; }
+
+        button {
+            transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        button:not(:disabled):hover {
+            transform: translateY(-1px);
+        }
+        button:not(:disabled):active {
+            transform: scale(0.96);
+        }
+
+        /* Dark Mode Full Overrides */
+        body.dark-theme #main-card {
+            background-color: rgba(15, 23, 42, 0.94);
+            border-color: rgba(71, 85, 105, 0.65);
+            color: #f1f5f9;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+        body.dark-theme .bg-slate-50 {
+            background-color: rgba(30, 41, 59, 0.88);
+            border-color: rgba(71, 85, 105, 0.55);
+            color: #e2e8f0;
+        }
+        body.dark-theme .bg-slate-100 {
+            background-color: rgba(30, 41, 59, 0.96);
+            border-color: rgba(71, 85, 105, 0.55);
+        }
+        body.dark-theme .bg-white {
+            background-color: #1e293b;
+            border-color: #334155;
+            color: #f8fafc;
+        }
+        body.dark-theme .text-slate-900,
+        body.dark-theme .text-slate-800,
+        body.dark-theme .text-slate-700 {
+            color: #f1f5f9;
+        }
+        body.dark-theme .text-slate-600,
+        body.dark-theme .text-slate-500 {
+            color: #94a3b8;
+        }
+        body.dark-theme #quiz-card-box {
+            background: linear-gradient(135deg, rgba(49, 46, 129, 0.45), rgba(30, 41, 59, 0.85));
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+        body.dark-theme #user-input {
+            background-color: #0f172a;
+            border-color: #475569;
+            color: #f8fafc;
+        }
+        body.dark-theme #user-input:focus {
+            border-color: #818cf8;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.25);
+        }
+        body.dark-theme #settings-modal > div,
+        body.dark-theme #share-modal > div,
+        body.dark-theme #help-modal > div,
+        body.dark-theme #auth-screen > div {
+            background-color: #1e293b;
+            border-color: #475569;
+            color: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(241, 245, 249, 0.6); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body id="app-body" class="bg-gradient-to-br from-cyan-50 via-sky-50 to-indigo-100 min-h-screen flex items-center justify-center p-2 sm:p-4 transition-all duration-500">
+
+    <!-- Auth Guard Screen -->
+    <div id="auth-screen" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 border border-slate-200 text-right animate-pop-up">
+            <div class="text-center space-y-1">
+                <span class="text-3xl">🔐</span>
+                <h3 class="text-lg font-black text-indigo-600">Dictoninglish</h3>
+                <p class="text-xs text-slate-500">הקלד את קוד הגישה כדי להיכנס למשחק:</p>
+            </div>
+            
+            <form onsubmit="verifyAppAccess(event)" class="space-y-3">
+                <input type="password" id="auth-code-input" placeholder="הקלד קוד גישה..." class="w-full px-3.5 py-3 rounded-2xl border-2 border-slate-300 focus:border-indigo-600 outline-none text-center text-lg font-bold tracking-widest bg-slate-50 shadow-sm" autofocus autocomplete="off">
+                <p id="auth-error-msg" class="hidden text-[11px] text-rose-600 font-bold text-center">❌ קוד שגוי, נסה שוב</p>
+                <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold py-3 rounded-2xl shadow-md text-xs">כניסה למשחק 🚀</button>
+            </form>
+
+            <button type="button" onclick="openHelpModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs shadow-sm">❓ עזרה</button>
+        </div>
+    </div>
+
+    <!-- Main App Card -->
+    <div id="main-card" class="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl w-full max-w-3xl p-3 sm:p-5 border border-slate-200 relative overflow-hidden transition-all text-sm">
+        
+        <!-- Header Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3 bg-slate-50 p-2.5 sm:p-3 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-black text-base sm:text-lg bg-gradient-to-l from-indigo-600 to-purple-600 bg-clip-text text-transparent">Dictoninglish 🎓</span>
+
+                <span id="streak-counter" class="hidden items-center gap-1 text-[11px] bg-orange-100 text-orange-800 px-2 py-1 rounded-xl border border-orange-300 font-bold shadow-sm animate-pop-up">
+                    ⚡ קומבו: <span id="streak-val" class="font-black">0</span>
+                </span>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+                <button onclick="openShareModal()" class="px-2.5 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 font-bold shadow-sm text-[11px] flex items-center gap-1">
+                    <span>📤</span> שיתוף
+                </button>
+                <button onclick="toggleAudioSFX()" id="sound-btn" class="p-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 shadow-sm text-xs">
+                    🔊
+                </button>
+                <button onclick="openSettingsModal()" class="p-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 shadow-sm text-xs">
+                    ⚙️
+                </button>
+            </div>
+        </div>
+
+        <!-- Global Bank Selector Bar -->
+        <div class="mb-3 bg-indigo-50/70 border border-indigo-200 p-2 rounded-2xl flex items-center justify-between gap-2 flex-wrap shadow-sm text-xs">
+            <div class="flex items-center gap-1.5 font-bold text-indigo-900">
+                <span class="text-sm">📦</span>
+                <span>מאגר מילים פעיל:</span>
+            </div>
+            <select id="global-bank-select" onchange="handleGlobalBankChange(this.value)" class="bg-white border border-indigo-300 rounded-xl text-xs font-bold py-1 px-2.5 text-indigo-900 outline-none shadow-sm cursor-pointer">
+                <option value="1">מאגר 1 (21 מילים)</option>
+                <option value="2">מאגר 2 (30 מילים)</option>
+                <option value="3">מאגר 3 (100 מילים)</option>
+                <option value="4">מאגר 4 (21 מילים)</option>
+                <option value="5" selected>מאגר 5 (30 מילים)</option>
+                <option value="all">כל המאגרים המשולבים</option>
+            </select>
+        </div>
+
+        <!-- Word Category Selector Bar -->
+        <div class="mb-3 bg-purple-50/70 border border-purple-200 p-2 rounded-2xl flex items-center justify-between gap-2 flex-wrap shadow-sm text-xs">
+            <div class="flex items-center gap-1.5 font-bold text-purple-900">
+                <span class="text-sm">🏷️</span>
+                <span>קטגוריית מילים:</span>
+            </div>
+            <select id="global-category-select" onchange="handleGlobalCategoryChange(this.value)" class="bg-white border border-purple-300 rounded-xl text-xs font-bold py-1 px-2.5 text-purple-900 outline-none shadow-sm cursor-pointer">
+                <option value="all" selected>כל המאגר (30 מילים)</option>
+                <option value="favorites">מילים מעודפות</option>
+            </select>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex items-center justify-between gap-1 mb-4 bg-slate-100 p-1 rounded-2xl border border-slate-200 overflow-x-auto text-[11px] sm:text-xs">
+            <button id="tab-quiz-btn" onclick="switchTab('quiz')" class="flex-1 min-w-[65px] py-1.5 px-1.5 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md text-center">✍️ כתיבה</button>
+            <button id="tab-mcq-btn" onclick="switchTab('mcq')" class="flex-1 min-w-[65px] py-1.5 px-1.5 rounded-xl font-bold text-slate-600 hover:text-slate-900 text-center">🎯 בחירה</button>
+            <button id="tab-assemble-btn" onclick="switchTab('assemble')" class="flex-1 min-w-[65px] py-1.5 px-1.5 rounded-xl font-bold text-slate-600 hover:text-slate-900 text-center">❌ איש תלוי</button>
+            <button id="tab-time-btn" onclick="switchTab('time')" class="flex-1 min-w-[65px] py-1.5 px-1.5 rounded-xl font-bold text-slate-600 hover:text-slate-900 text-center">⚡ מרוץ</button>
+            <button id="tab-listen-btn" onclick="switchTab('listen')" class="flex-1 min-w-[65px] py-1.5 px-1.5 rounded-xl font-bold text-slate-600 hover:text-slate-900 text-center">🎧 שמיעה</button>
+            <button id="tab-match-btn" onclick="switchTab('match')" class="flex-1 min-w-[65px] py-1.5 px-1.5 rounded-xl font-bold text-slate-600 hover:text-slate-900 text-center">🧩 התאמה</button>
+            <button id="tab-study-btn" onclick="switchTab('study')" class="flex-1 min-w-[65px] py-1.5 px-1.5 rounded-xl font-bold text-slate-600 hover:text-slate-900 text-center">🎴 כרטיסים</button>
+            <button id="tab-profile-btn" onclick="switchTab('profile')" class="flex-1 min-w-[70px] py-1.5 px-1.5 rounded-xl font-bold text-slate-600 hover:text-slate-900 text-center">📊 סטטיסטיקה</button>
+            <button id="tab-words-btn" onclick="switchTab('words')" class="flex-1 min-w-[65px] py-1.5 px-1.5 rounded-xl font-bold text-slate-600 hover:text-slate-900 text-center">📚 מאגר</button>
+        </div>
+
+        <!-- Practice Subset Notification Banner -->
+        <div id="practice-subset-banner" class="hidden mb-3 p-2.5 bg-amber-50 border border-amber-300 rounded-2xl flex items-center justify-between text-xs text-amber-900 shadow-sm animate-pop-up">
+            <div class="flex items-center gap-1.5 font-semibold">
+                <span class="text-sm">🎯</span>
+                <span id="subset-banner-text">מתאמן על מילים שטעית בהן</span>
+            </div>
+            <button onclick="resetToSelectedBank()" class="text-[11px] bg-amber-500 hover:bg-amber-400 text-white font-bold py-1 px-2.5 rounded-lg shadow-sm">חזור למאגר</button>
+        </div>
+
+        <!-- Section 1: Writing Quiz -->
+        <div id="quiz-section" class="space-y-4 animate-tab-in">
+            <div class="flex justify-between items-center border-b border-slate-200 pb-2.5">
+                <div>
+                    <h1 class="text-lg font-extrabold text-indigo-600 flex items-center gap-1.5">חידון כתיבה ✍️</h1>
+                    <p id="quiz-subtitle" class="text-[11px] text-slate-500 mt-0.5">הקלד באנגלית את התרגום הנכון (Enter למענה)</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <div id="score-badge" class="bg-white border border-slate-200 text-indigo-700 text-[11px] font-semibold px-2.5 py-1 rounded-xl shadow-sm">ניקוד: <span dir="ltr" class="inline-block font-bold">0 / 150</span></div>
+                    <div id="progress-badge" class="bg-indigo-50 border border-indigo-200 text-indigo-800 text-[11px] font-semibold px-2.5 py-1 rounded-xl"><span dir="ltr" class="inline-block font-bold">1 / 30</span></div>
+                </div>
+            </div>
+
+            <div id="quiz-screen" class="space-y-4">
+                <div id="quiz-card-box" class="bg-gradient-to-br from-indigo-50/80 to-slate-50 rounded-2xl p-6 text-center border border-indigo-200/80 flex flex-col items-center justify-center relative overflow-hidden shadow-sm">
+                    <span class="text-[11px] font-bold text-indigo-600 uppercase tracking-wider block mb-1">תרגם לאנגלית את המילה:</span>
+                    <h2 id="question-hebrew" class="text-2xl sm:text-3xl font-black text-slate-900 my-1">טוען...</h2>
+                </div>
+
+                <form id="answer-form" onsubmit="handleAnswer(event)" class="space-y-3">
+                    <div>
+                        <div class="relative flex items-center">
+                            <input type="text" id="user-input" autocomplete="off" placeholder="הקלד או הקלט את התשובה באנגלית..." oninput="validateQuizInput()" class="w-full pl-12 pr-3.5 py-3 rounded-2xl bg-white border-2 border-slate-300 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 text-lg text-slate-900 outline-none text-left font-semibold tracking-wide shadow-sm" dir="ltr">
+                            <button type="button" id="mic-btn" onclick="toggleSpeechRecognition()" title="הקלט תשובה בקול (לדוגמה: omelet noun)" class="absolute left-2 p-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 flex items-center justify-center shadow-sm">
+                                <svg id="mic-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                    <line x1="12" x2="12" y1="19" y2="22"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p id="mic-status-msg" class="hidden text-[11px] text-indigo-600 font-bold mt-1 text-right">🎙️ מקשיב... אמור את המילה באנגלית ואת חלק הדיבור (למשל: omelet noun)</p>
+                        <p id="input-warning" class="hidden text-[11px] text-rose-600 font-bold mt-1 text-right">⚠️ יש להקליד לפחות 2 אותיות באנגלית</p>
+                    </div>
+
+                    <div id="pos-quick-buttons" class="flex flex-wrap items-center justify-center gap-1.5 pb-0.5">
+                        <span class="text-[11px] font-bold text-indigo-700 w-full text-center mb-0.5">הוספת חלק דיבור בנגיעה:</span>
+                        <button type="button" onclick="appendPosTag('v')" class="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-xl text-[11px] font-extrabold shadow-sm">(v) פועל</button>
+                        <button type="button" onclick="appendPosTag('n')" class="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-xl text-[11px] font-extrabold shadow-sm">(n) שם עצם</button>
+                        <button type="button" onclick="appendPosTag('adj')" class="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-xl text-[11px] font-extrabold shadow-sm">(adj) תואר</button>
+                        <button type="button" onclick="appendPosTag('exp')" class="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-xl text-[11px] font-extrabold shadow-sm">(exp) ביטוי</button>
+                        <button type="button" onclick="appendPosTag('adv')" class="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-xl text-[11px] font-extrabold shadow-sm">(adv) תואר פועל</button>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button type="submit" id="submit-btn" class="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold py-3 px-5 rounded-2xl shadow-lg flex items-center justify-center gap-2 text-sm">
+                            בדוק תשובה 🚀 <span class="text-[10px] opacity-75 font-normal">(Enter)</span>
+                        </button>
+                        <button type="button" id="prev-fix-btn" onclick="fixPreviousQuestion()" class="hidden bg-[#ffa600] hover:bg-[#f09a00] text-slate-950 font-bold py-3 px-4 rounded-2xl shrink-0 shadow-sm flex items-center gap-1 text-xs" title="תיקון שאלה קודמת">
+                            תיקון ✏️
+                        </button>
+                        <button type="button" id="skip-btn" onclick="skipQuestion()" class="bg-white hover:bg-slate-100 text-slate-700 font-bold py-3 px-3.5 rounded-2xl border border-slate-300 shrink-0 shadow-sm flex items-center gap-1 text-xs" title="דלג">
+                            <span class="inline-block bg-blue-100 text-blue-600 p-0.5 rounded-lg text-[10px]">⏭️</span> דלג
+                        </button>
+                    </div>
+                </form>
+
+                <div id="feedback-box" class="hidden p-3 rounded-2xl text-center font-bold text-xs border animate-pop-up"></div>
+
+                <div id="post-answer-controls" class="hidden flex flex-col sm:flex-row gap-2 pt-1 animate-pop-up">
+                    <div class="flex-1 flex items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-2xl border border-slate-200 text-xs">
+                        <button type="button" onclick="speakQuizAnswer()" class="flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-800">🔊 השמע תשובה</button>
+                        <select id="quiz-speech-rate-select" onchange="changeQuizSpeechRate(event)" class="bg-transparent text-[11px] font-semibold text-slate-700 outline-none cursor-pointer">
+                            <option value="0.5">0.5x</option>
+                            <option value="0.75">0.75x</option>
+                            <option value="1.0" selected>1.0x רגיל</option>
+                            <option value="1.25">1.25x מהיר</option>
+                        </select>
+                    </div>
+                    <button type="button" id="next-q-btn" onclick="nextQuestion()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-2.5 px-5 rounded-2xl shadow-lg flex items-center justify-center gap-2 text-xs">הבא ➡️</button>
+                </div>
+            </div>
+
+            <div id="completion-screen" class="hidden text-center space-y-4 py-2 animate-pop-up">
+                <div class="w-16 h-16 bg-emerald-100 text-emerald-600 border border-emerald-300 rounded-3xl flex items-center justify-center mx-auto text-3xl shadow-md animate-float">🏆</div>
+                <h2 class="text-xl sm:text-2xl font-black text-slate-900">כל הכבוד! סיימת את החידון</h2>
+                <div id="score-summary" class="text-xs sm:text-sm text-slate-700 font-medium bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1"></div>
+
+                <div id="mistakes-action-container" class="space-y-2"></div>
+                <div id="mistakes-review" class="text-right space-y-1.5 max-h-60 overflow-y-auto pt-1 text-xs"></div>
+
+                <div class="bg-indigo-50/80 border border-indigo-200 p-3 rounded-2xl text-right space-y-2">
+                    <h3 class="text-[11px] font-bold text-indigo-900">📦 בחר מאגרים לחידון חדש:</h3>
+                    <div id="bank-checkboxes-container" class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-xs"></div>
+                    <button onclick="startCustomBankQuizFromCompletion()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl shadow-sm text-xs">🎯 התחל חידון</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 1.25: Multiple Choice Mode (בחירה) -->
+        <div id="mcq-section" class="hidden space-y-4 animate-tab-in">
+            <div class="border-b border-slate-200 pb-2.5 flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-extrabold text-blue-600 flex items-center gap-1.5">שאלות בחירה 🎯</h2>
+                    <p class="text-[11px] text-slate-500 mt-0.5">בחר את התרגום העברי הנכון למילה באנגלית</p>
+                </div>
+                <span id="mcq-progress-badge" class="bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-xl">שאלה 1 / 30</span>
+            </div>
+
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 p-6 rounded-3xl text-center space-y-2.5 shadow-sm">
+                <span class="text-[11px] font-bold text-blue-700 uppercase tracking-wider block">מה התרגום הנכון בעברית?</span>
+                <h3 id="mcq-word-english" class="text-2xl sm:text-3xl font-black text-slate-900" dir="ltr">...</h3>
+                <div class="pt-0.5">
+                    <button onclick="speakMcqWord()" class="px-2.5 py-1 bg-white hover:bg-blue-100 border border-blue-300 text-blue-800 rounded-xl text-xs font-bold shadow-sm">🔊 השמע מילה</button>
+                </div>
+            </div>
+
+            <div id="mcq-options-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs"></div>
+
+            <div id="mcq-feedback-box" class="hidden p-3 rounded-2xl text-center font-bold text-xs border animate-pop-up"></div>
+
+            <div class="flex gap-2 pt-0.5">
+                <button onclick="skipMcqQuestion()" class="w-full bg-white hover:bg-slate-100 text-slate-700 font-bold py-3 px-4 rounded-2xl border border-slate-300 shadow-sm text-xs">⏭️ דלג למילה הבאה</button>
+            </div>
+        </div>
+
+        <!-- Section 1.5: Hangman Mode (איש תלוי) -->
+        <div id="assemble-section" class="hidden space-y-4 animate-tab-in">
+            <div class="border-b border-slate-200 pb-2.5 flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-extrabold text-purple-600 flex items-center gap-1.5">איש תלוי ❌</h2>
+                    <p class="text-[11px] text-slate-500 mt-0.5">הקלד או בחר אותיות באנגלית לפני שהאיש נחשף!</p>
+                </div>
+                <span id="assemble-progress-badge" class="bg-purple-50 border border-purple-200 text-purple-800 text-xs font-bold px-2.5 py-1 rounded-xl">שאלה 1 / 30</span>
+            </div>
+
+            <div class="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 p-3 rounded-3xl text-center space-y-2 shadow-sm flex flex-col items-center">
+                <svg height="110" width="110" class="bg-white border border-slate-200 rounded-2xl shadow-inner scale-90">
+                    <line x1="20" y1="100" x2="90" y2="100" stroke="#334155" stroke-width="3.5" stroke-linecap="round"/>
+                    <line x1="50" y1="12" x2="50" y2="100" stroke="#334155" stroke-width="3.5" stroke-linecap="round"/>
+                    <line x1="50" y1="12" x2="90" y2="12" stroke="#334155" stroke-width="3.5" stroke-linecap="round"/>
+                    <line x1="90" y1="12" x2="90" y2="30" stroke="#334155" stroke-width="3.5" stroke-linecap="round"/>
+                    <circle id="part-1" cx="90" cy="42" r="12" stroke="#ef4444" stroke-width="2.5" fill="none" class="hidden"/>
+                    <line id="part-2" x1="90" y1="54" x2="90" y2="78" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" class="hidden"/>
+                    <line id="part-3" x1="90" y1="62" x2="75" y2="74" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" class="hidden"/>
+                    <line id="part-4" x1="90" y1="62" x2="105" y2="74" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" class="hidden"/>
+                    <line id="part-5" x1="90" y1="78" x2="78" y2="98" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" class="hidden"/>
+                    <line id="part-6" x1="90" y1="78" x2="102" y2="98" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" class="hidden"/>
+                </svg>
+                <span class="text-[11px] font-bold text-purple-700 uppercase tracking-wider block">תרגם את המילה בעברית:</span>
+                <h3 id="assemble-hebrew-word" class="text-xl sm:text-2xl font-black text-slate-900">...</h3>
+            </div>
+
+            <div id="assemble-answer-box" class="min-h-[58px] p-2 bg-slate-50 border-2 border-dashed border-purple-300 rounded-2xl flex flex-wrap items-center justify-center gap-1.5 shadow-inner text-lg font-black tracking-widest text-indigo-900" style="direction: ltr;"></div>
+
+            <div>
+                <span class="text-[11px] font-bold text-slate-600 block mb-1.5 text-center">הקלד או בחר אותיות (QWERTY):</span>
+                <div id="assemble-letters-grid" class="flex flex-col items-center gap-1 p-2 bg-white rounded-2xl border border-slate-200 shadow-sm max-w-lg mx-auto text-xs" style="direction: ltr;"></div>
+            </div>
+
+            <div id="assemble-feedback-box" class="hidden p-3 rounded-2xl text-center font-bold text-xs border animate-pop-up"></div>
+
+            <div class="flex gap-2 pt-1">
+                <button onclick="skipAssembleQuestion()" class="w-full bg-white hover:bg-slate-100 text-slate-700 font-bold py-3 px-4 rounded-2xl border border-slate-300 shadow-sm text-xs">⏭️ דלג למילה הבאה</button>
+            </div>
+        </div>
+
+        <!-- Section 2: Time Attack -->
+        <div id="time-section" class="hidden space-y-4 animate-tab-in">
+            <div class="border-b border-slate-200 pb-2.5 flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-extrabold text-amber-600 flex items-center gap-1.5">מרוץ זמנים ⚡</h2>
+                    <p class="text-[11px] text-slate-500 mt-0.5">ענה על כמה שיותר מילים ב-60 שניות!</p>
+                </div>
+            </div>
+
+            <div id="time-start-card" class="bg-slate-50 p-6 rounded-3xl border border-slate-200 text-center space-y-3">
+                <div class="text-4xl animate-float">⏱️</div>
+                <h3 class="text-xl font-black text-slate-900">מוכן לאתגר הציון?</h3>
+                <button onclick="startTimeAttackGame()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-6 py-3 rounded-2xl text-base shadow-lg">התחל מרוץ 🚀</button>
+            </div>
+
+            <div id="time-play-card" class="hidden space-y-3 animate-pop-up">
+                <div class="flex items-center justify-between bg-amber-50 border border-amber-200 p-2.5 rounded-2xl text-xs">
+                    <span id="time-clock" class="font-mono text-lg font-black text-amber-700">⏱️ 60s</span>
+                    <span id="time-score" class="font-bold text-slate-800 text-xs">תשובות נכונות: 0</span>
+                </div>
+                <div class="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 p-6 rounded-2xl text-center shadow-sm">
+                    <span class="text-[11px] font-bold text-amber-700 uppercase tracking-wider block mb-1">תרגם במהירות:</span>
+                    <h3 id="time-word-hebrew" class="text-2xl sm:text-3xl font-black text-slate-900">...</h3>
+                </div>
+                <div id="time-options-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs"></div>
+            </div>
+        </div>
+
+        <!-- Section 3: Listening Quiz -->
+        <div id="listen-section" class="hidden space-y-4 animate-tab-in">
+            <div class="border-b border-slate-200 pb-2.5 flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-extrabold text-teal-600 flex items-center gap-1.5">חידון שמיעה 🎧</h2>
+                    <p class="text-[11px] text-slate-500 mt-0.5">הקשב למילה באנגלית ובחר את התרגום העברי הנכון</p>
+                </div>
+                <span id="listen-score-badge" class="bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold px-2.5 py-1 rounded-xl">שאלה 1 / 30</span>
+            </div>
+            <div class="bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200 p-6 rounded-3xl text-center space-y-3 shadow-sm">
+                <p class="text-[11px] font-bold text-teal-700 uppercase">לחץ להשמעת המילה מחדש:</p>
+                <button onclick="playCurrentListenAudio()" class="w-16 h-16 bg-teal-600 hover:bg-teal-500 text-white rounded-full mx-auto flex items-center justify-center text-2xl shadow-lg">🔊</button>
+            </div>
+            <div id="listen-options-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs"></div>
+        </div>
+
+        <!-- Section 4: Matching Game -->
+        <div id="match-section" class="hidden space-y-4 animate-tab-in">
+            <div class="border-b border-slate-200 pb-2.5 flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-extrabold text-indigo-600 flex items-center gap-1.5">משחק התאמה 🧩</h2>
+                    <p class="text-[11px] text-slate-500 mt-0.5">בהתאמת זוג מילים נכונה תושמע המילה!</p>
+                </div>
+                <div class="flex items-center gap-1.5 text-xs">
+                    <span id="match-round-badge" class="bg-indigo-50 border border-indigo-200 text-indigo-800 font-bold px-2 py-1 rounded-xl">סיבוב 1</span>
+                    <span id="match-score-badge" class="bg-white border border-slate-200 text-slate-700 font-bold px-2 py-1 rounded-xl">זוגות: 0</span>
+                </div>
+            </div>
+            <div id="matching-board-wrapper" class="grid grid-cols-2 gap-2.5 sm:gap-3 text-xs">
+                <div id="hebrew-column" class="space-y-2"></div>
+                <div id="english-column" class="space-y-2"></div>
+            </div>
+            <div id="match-completion-screen" class="hidden text-center py-6 space-y-3 bg-slate-50 rounded-3xl border border-slate-200 animate-pop-up">
+                <div class="text-4xl animate-float">🎉</div>
+                <h3 class="text-xl font-black text-slate-900">מצוין! סיימת את כל ההתאמות</h3>
+                <p id="match-final-score" class="text-xs text-slate-600 font-bold"></p>
+                <button onclick="initMatchGame()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold px-5 py-2.5 rounded-2xl text-xs shadow-md">שחק שוב 🔄</button>
+            </div>
+        </div>
+
+        <!-- Section 5: Study Cards -->
+        <div id="study-section" class="hidden space-y-4 animate-tab-in">
+            <div class="border-b border-slate-200 pb-2.5 flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-extrabold text-purple-600 flex items-center gap-1.5">כרטיסיות לימוד 🎴</h2>
+                    <p class="text-[11px] text-slate-500 mt-0.5">לחץ על הכרטיס כדי להפוך אותו</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button id="card-favorite-btn" onclick="toggleFavoriteCurrentCard(event)" class="p-1.5 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl text-xs font-bold shadow-sm" title="סמן כמועדף">⭐</button>
+                    <span id="card-counter" class="bg-purple-50 border border-purple-200 text-purple-800 text-xs font-bold px-2.5 py-1 rounded-xl">1 מתוך 30</span>
+                </div>
+            </div>
+
+            <div id="flashcard-box" class="perspective-1000 w-full h-52 cursor-pointer" onclick="flipCard()">
+                <div id="flashcard-inner" class="w-full h-full relative transform-style-3d shadow-md rounded-3xl">
+                    <div class="absolute inset-0 backface-hidden bg-gradient-to-br from-indigo-600 to-purple-700 text-white rounded-3xl p-5 flex flex-col items-center justify-center text-center border border-indigo-400">
+                        <span class="text-[11px] font-bold opacity-80 uppercase tracking-widest block mb-1">עברית</span>
+                        <h3 id="card-hebrew" class="text-2xl sm:text-3xl font-black">...</h3>
+                        <span class="text-[10px] opacity-75 mt-3 bg-white/20 px-2.5 py-0.5 rounded-full">לחץ להיפוך 🔄</span>
+                    </div>
+                    <div class="absolute inset-0 backface-hidden rotate-y-180 bg-white text-slate-800 rounded-3xl p-5 flex flex-col items-center justify-center text-center border-2 border-purple-300 shadow-xl">
+                        <span class="text-[11px] font-bold text-purple-600 uppercase tracking-widest block mb-0.5">אנגלית</span>
+                        <h3 id="card-english" class="text-xl sm:text-2xl font-black text-slate-900" dir="ltr">...</h3>
+                        <p id="card-phonetic" class="text-[11px] text-indigo-600 font-semibold my-0.5" dir="rtl"></p>
+                        <p id="card-example" class="text-[11px] text-slate-500 italic max-w-sm mt-1" dir="ltr"></p>
+                        <div class="mt-3 flex items-center gap-2" onclick="event.stopPropagation()">
+                            <button onclick="speakEnglishWord(event)" class="px-2.5 py-1 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-xl text-[11px] font-bold shadow-sm">🔊 השמע</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-1.5 pt-1 text-xs">
+                <button onclick="prevCard()" class="bg-white hover:bg-slate-100 text-slate-700 font-extrabold px-3.5 py-2 rounded-xl border border-slate-300 shadow-sm">⬅️ הקודם</button>
+                <div class="flex gap-1.5">
+                    <button id="autoplay-btn" onclick="toggleAutoPlayStudy()" class="bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 font-bold px-2.5 py-2 rounded-xl shadow-sm">▶️ מצג</button>
+                    <button onclick="shuffleStudyCards()" class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold px-2.5 py-2 rounded-xl shadow-sm">🔀 ערבב</button>
+                </div>
+                <button onclick="nextCard()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold px-3.5 py-2 rounded-xl shadow-md">הבא ➡️</button>
+            </div>
+
+            <div class="pt-3 border-t border-slate-200">
+                <h4 class="text-[11px] font-bold text-slate-600 mb-1.5">בחר מילה ישירות:</h4>
+                <div id="word-list-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto p-0.5 text-xs"></div>
+            </div>
+        </div>
+
+        <!-- Section 7: "סטטיסטיקה ומצב" -->
+        <div id="profile-section" class="hidden space-y-4 animate-tab-in">
+            <div class="border-b border-slate-200 pb-2.5 flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-extrabold text-indigo-600 flex items-center gap-1.5">📊 מצב וביצועים</h2>
+                    <p class="text-[11px] text-slate-500 mt-0.5">סטטיסטיקות ומילים הדורשות חיזוק</p>
+                </div>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    <div class="bg-indigo-50 border border-indigo-200 p-3 rounded-2xl text-center">
+                        <span class="text-[11px] font-bold text-indigo-700 block">⚡ שיא קומבו</span>
+                        <span id="stat-best-streak" class="text-2xl font-black text-indigo-900">0</span>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl text-center">
+                        <span class="text-[11px] font-bold text-emerald-700 block">🎯 דיוק</span>
+                        <span id="stat-accuracy" class="text-2xl font-black text-emerald-900">0%</span>
+                    </div>
+                    <div class="bg-purple-50 border border-purple-200 p-3 rounded-2xl text-center">
+                        <span class="text-[11px] font-bold text-purple-700 block">📚 מילים במאגר</span>
+                        <span id="stat-total-words" class="text-2xl font-black text-purple-900">30</span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
+                    <h3 class="text-[11px] font-bold text-slate-700 flex items-center gap-1">🎯 מילים שטעית בהן (דורשות חיזוק):</h3>
+                    <div id="stats-weak-words-list" class="space-y-1.5 max-h-40 overflow-y-auto pr-1"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 8: Word Bank List -->
+        <div id="words-section" class="hidden space-y-3 text-xs animate-tab-in">
+            <div class="border-b border-slate-200 pb-2 flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-extrabold text-indigo-600 flex items-center gap-1.5">מאגר המילים 📚</h2>
+                    <p class="text-[11px] text-slate-500 mt-0.5">תצוגה צפופה ונוחה של המילים במאגר הנבחר</p>
+                </div>
+                <span id="total-words-count-badge" class="bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-bold px-2.5 py-1 rounded-xl">30 מילים</span>
+            </div>
+
+            <div id="pos-legend-box" class="p-2 bg-amber-50 border border-amber-200 rounded-2xl text-[11px] text-amber-900 font-semibold">
+                💡 מקרא חלקי דיבור: <span class="font-mono text-indigo-700">(v)</span> פועל | <span class="font-mono text-indigo-700">(n)</span> שם עצם | <span class="font-mono text-indigo-700">(adj)</span> תואר | <span class="font-mono text-indigo-700">(exp)</span> ביטוי | <span class="font-mono text-indigo-700">(adv)</span> תואר פועל
+            </div>
+
+            <div id="custom-words-list" class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-[380px] overflow-y-auto pr-1"></div>
+        </div>
+
+        <!-- Footer Credit -->
+        <div class="mt-4 pt-2 border-t border-slate-100 text-center">
+            <span class="text-[11px] text-slate-400 font-medium">נוצר ע''י הראל • Dictoninglish</span>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="help-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 text-xs">
+        <div class="bg-white rounded-3xl p-5 max-w-xs w-full shadow-2xl space-y-3 border border-slate-200 text-right animate-pop-up relative">
+            <button onclick="closeHelpModal()" class="absolute top-3.5 left-3.5 text-slate-400 hover:text-slate-700 font-bold text-lg w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100">✕</button>
+            <h3 class="text-base font-black text-indigo-600 flex items-center gap-1.5">❓ עזרה בכניסה למשחק</h3>
+            <p class="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                תבקש מהראל את הקוד ואם הוא לא עובד יכול להיות שהקוד עבר שינוי.
+            </p>
+            <button onclick="closeHelpModal()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs shadow-md">הבנתי 👍</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 text-xs">
+        <div class="bg-white rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4 border border-slate-200 relative text-right animate-pop-up">
+            <button onclick="closeSettingsModal()" class="absolute top-3.5 left-3.5 text-slate-400 hover:text-slate-700 font-bold text-lg w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100">✕</button>
+            <div class="border-b border-slate-200 pb-2.5 flex items-center justify-between">
+                <h3 class="text-base font-black text-indigo-600 flex items-center gap-1.5">⚙️ הגדרות האפליקציה</h3>
+            </div>
+            <div class="space-y-3 pt-0.5">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1">🎨 ערכת נושא:</label>
+                    <select id="setting-bg-color" onchange="updateSettingsFromUI()" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none">
+                        <option value="light">בהיר מודרני</option>
+                        <option value="dark">כהה מודרני</option>
+                        <option value="cyan" selected>תכלת מואר</option>
+                        <option value="purple">סגול מודרני</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-800">🏷️ חלקי דיבור</label>
+                        <span class="text-[10px] text-slate-500 block">דרישת חלק דיבור (n, v, adj, exp, adv)</span>
+                    </div>
+                    <select id="setting-show-pos" onchange="updateSettingsFromUI()" class="bg-white border border-slate-300 rounded-lg text-[11px] font-bold p-1 text-slate-800 outline-none">
+                        <option value="yes" selected>מופעל (ברירת מחדל)</option>
+                        <option value="no">מבוטל</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-800">🙈 הסתר משוב ותשובות</label>
+                        <span class="text-[10px] text-slate-500 block">ללא הצגת ניקוד ותשובה נכונה</span>
+                    </div>
+                    <select id="setting-hide-feedback" onchange="updateSettingsFromUI()" class="bg-white border border-slate-300 rounded-lg text-[11px] font-bold p-1 text-slate-800 outline-none">
+                        <option value="no">מוצג (רגיל)</option>
+                        <option value="yes">מוסתר</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-800">🔊 אפקטים קוליים (SFX)</label>
+                        <span class="text-[10px] text-slate-500 block">צלילי תשובה נכונה וטעות</span>
+                    </div>
+                    <select id="setting-sfx" onchange="updateSettingsFromUI()" class="bg-white border border-slate-300 rounded-lg text-[11px] font-bold p-1 text-slate-800 outline-none">
+                        <option value="yes">מופעל</option>
+                        <option value="no">מבוטל</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-800">⏭️ מעבר אוטומטי</label>
+                        <span class="text-[10px] text-slate-500 block">עובר ממוזמן לשאלה הבאה</span>
+                    </div>
+                    <select id="setting-auto-advance" onchange="updateSettingsFromUI()" class="bg-white border border-slate-300 rounded-lg text-[11px] font-bold p-1 text-slate-800 outline-none">
+                        <option value="no">לא</option>
+                        <option value="yes">כן</option>
+                    </select>
+                </div>
+            </div>
+            <button onclick="closeSettingsModal()" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold py-2.5 rounded-xl shadow-md flex items-center justify-center gap-1 text-xs">שמור וסגור 👍</button>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="share-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 text-xs">
+        <div class="bg-white rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-3 border border-slate-200 text-right animate-pop-up relative">
+            <button onclick="closeShareModal()" class="absolute top-3.5 left-3.5 text-slate-400 hover:text-slate-700 font-bold text-lg w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100">✕</button>
+            <h3 class="text-base font-black text-indigo-600 flex items-center gap-1.5">📤 שיתוף האתר</h3>
+            <p class="text-[11px] text-slate-600">סמן את הקישור והעתק את הקישור:</p>
+            <div class="space-y-3 pt-0.5">
+                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
+                    <input type="text" id="share-link-input" readonly value="https://sites.google.com/view/dictoninglish9256/%D7%94%D7%9E%D7%A9%D7%97%D7%A7-%D7%94%D7%9E%D7%9C%D7%90" class="w-full p-2 bg-white border border-slate-300 rounded-xl text-[11px] font-mono text-slate-800 outline-none select-all" dir="ltr">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const wordBanks = {
+            "1": {
+                name: "מאגר 1 (בריאות ומאמרים)",
+                words: [
+                    { he: "מאמר", en: "article", pos: "n", posFull: "noun", phonetic: "אַרְטִיקְל", example: "I read an interesting article today." },
+                    { he: "שווה את זה", en: "be worth it", pos: "exp", posFull: "expression", phonetic: "בִּי וּוֹרְת' אִיט", example: "Hard work is always worth it." },
+                    { he: "דם", en: "blood", pos: "n", posFull: "noun", phonetic: "בְּלַאד", example: "Blood pumps through our body." },
+                    { he: "נפוץ", en: "common", pos: "adj", posFull: "adjective", phonetic: "קוֹמון", example: "Flu is a common illness." },
+                    { he: "מחלה", en: "disease", pos: "n", posFull: "noun", phonetic: "דִיזִיז", example: "Eating well prevents disease." },
+                    { he: "לעשות כמיטב יכולתו", en: "do (one's) best", pos: "exp", posFull: "expression", phonetic: "דוּ וַואנְז בֶּסְט", example: "Always do your best in tests." },
+                    { he: "מקרה חירום", en: "emergency", pos: "n", posFull: "noun", phonetic: "אִימֶרְגֶ'נְסִי", example: "Call 100 in an emergency." },
+                    { he: "בסדר / טוב", en: "fine", pos: "adj", posFull: "adjective", phonetic: "פַאיְן", example: "I feel fine and healthy today." },
+                    { he: "בריאות", en: "health", pos: "n", posFull: "noun", phonetic: "הֶלְת'", example: "Good health brings happiness." },
+                    { he: "למקרה ש", en: "in case", pos: "exp", posFull: "expression", phonetic: "אִין כֵּייס", example: "Take an umbrella in case it rains." },
+                    { he: "הכרחי", en: "necessary", pos: "adj", posFull: "adjective", phonetic: "נֶסֶסֶרִי", example: "Sleep is necessary for energy." },
+                    { he: "מובן מאליו", en: "obvious", pos: "adj", posFull: "adjective", phonetic: "אוֹבְוִויוּס", example: "The answer was very obvious." },
+                    { he: "יום אחד", en: "one day", pos: "exp", posFull: "expression", phonetic: "וַואן דֵיי", example: "One day I will visit London." },
+                    { he: "לארגן", en: "organize", pos: "v", posFull: "verb", phonetic: "אוֹרְגַנַאיְז", example: "Let's organize the classroom." },
+                    { he: "מטופל", en: "patient", pos: "n", posFull: "noun", phonetic: "פֵּייְשֶׁנְט", example: "The doctor examines the patient." },
+                    { he: "שלום / שלווה", en: "peace", pos: "n", posFull: "noun", phonetic: "פִּיס", example: "Everyone wishes for world peace." },
+                    { he: "מרוצה", en: "pleased", pos: "adj", posFull: "adjective", phonetic: "פְּלִיזְד", example: "The teacher was pleased with us." },
+                    { he: "להציע", en: "suggest", pos: "v", posFull: "verb", phonetic: "סָאגֶ'סְט", example: "I suggest we take a break." },
+                    { he: "נורא", en: "terrible", pos: "adj", posFull: "adjective", phonetic: "טֶרִיבְּל", example: "The bad weather was terrible." },
+                    { he: "כאב שיניים", en: "toothache", pos: "n", posFull: "noun", phonetic: "טוּתְ'אֵייק", example: "I have a toothache and need a dentist." },
+                    { he: "טיפוסי", en: "typical", pos: "adj", posFull: "adjective", phonetic: "טִיפִּיקַל", example: "It was a typical sunny morning." }
+                ]
+            },
+            "2": {
+                name: "מאגר 2 (מעודכן - 30 מילים)",
+                words: [
+                    { he: "בסביבה", en: "around", pos: "adv", posFull: "adverb", phonetic: "אֲרַאוּנְד", example: "He walked around the park." },
+                    { he: "בערך", en: "around", pos: "adv", posFull: "adverb", phonetic: "אֲרַאוּנְד", example: "It costs around 10 dollars." },
+                    { he: "ספר", en: "book", pos: "n", posFull: "noun", phonetic: "בּוּק", example: "I am reading an interesting book." },
+                    { he: "להזמין", en: "book", pos: "v", posFull: "verb", phonetic: "בּוּק", example: "I need to book a hotel room." },
+                    { he: "ברור", en: "clear", pos: "adj", posFull: "adjective", phonetic: "קְלִיר", example: "The instructions are very clear." },
+                    { he: "בהיר", en: "clear", pos: "adj", posFull: "adjective", phonetic: "קְלִיר", example: "It is a clear blue sky today." },
+                    { he: "חשמל", en: "energy", pos: "n", posFull: "noun", phonetic: "אֶנֶרְגִין", example: "Save energy by turning off lights." },
+                    { he: "כוח", en: "energy", pos: "n", posFull: "noun", phonetic: "אֶנֶרְגִין", example: "She has a lot of energy today." },
+                    { he: "מאוורר", en: "fan", pos: "n", posFull: "noun", phonetic: "פָּאן", example: "Turn on the fan, it is hot." },
+                    { he: "מעריץ", en: "fan", pos: "n", posFull: "noun", phonetic: "פָּאן", example: "He is a big fan of this band." },
+                    { he: "חינם", en: "free", pos: "adj", posFull: "adjective", phonetic: "פְרִי", example: "This service is completely free." },
+                    { he: "חופשי, פנוי", en: "free", pos: "adj", posFull: "adjective", phonetic: "פְרִי", example: "Are you free this evening?" },
+                    { he: "קשה", en: "hard", pos: "adj", posFull: "adjective", phonetic: "הָרְד", example: "This math test was very hard." },
+                    { he: "קשיח", en: "hard", pos: "adj", posFull: "adjective", phonetic: "הָרְד", example: "The ground was frozen and hard." },
+                    { he: "תור", en: "line", pos: "n", posFull: "noun", phonetic: "לַYIN", example: "Stand in line and wait." },
+                    { he: "קו", en: "line", pos: "n", posFull: "noun", phonetic: "לַYIN", example: "Draw a straight line." },
+                    { he: "לפספס", en: "miss", pos: "v", posFull: "verb", phonetic: "מִיס", example: "Do not miss the bus." },
+                    { he: "להתגעגע", en: "miss", pos: "v", posFull: "verb", phonetic: "מִיס", example: "I miss my family." },
+                    { he: "במהלך", en: "over", pos: "adv", posFull: "adverb", phonetic: "אוֹבֶר", example: "Over the years, things changed." },
+                    { he: "יותר מ-", en: "over", pos: "adv", posFull: "adverb", phonetic: "אוֹבֶר", example: "It costs over 50 dollars." },
+                    { he: "חלל", en: "space", pos: "n", posFull: "noun", phonetic: "סְפֵּיס", example: "Astronauts travel into space." },
+                    { he: "מקום", en: "space", pos: "n", posFull: "noun", phonetic: "סְפֵּיס", example: "Is there space in the car?" },
+                    { he: "שף", en: "chef", pos: "n", posFull: "noun", phonetic: "שֶׁף", example: "The chef cooked a great meal." },
+                    { he: "שמנת, קרם", en: "cream", pos: "n", posFull: "noun", phonetic: "קְרִים", example: "Add some cream to the coffee." },
+                    { he: "קינוח", en: "dessert", pos: "n", posFull: "noun", phonetic: "דֶּזֶרְט", example: "We had ice cream for dessert." },
+                    { he: "טרי", en: "fresh", pos: "adj", posFull: "adjective", phonetic: "פְרֶשׁ", example: "Eat fresh fruit every day." },
+                    { he: "רכיבים", en: "ingredients", pos: "n", posFull: "noun", phonetic: "אִנְגְרִידִייֶנְטס", example: "Check the ingredients of the cake." },
+                    { he: "רוטב", en: "sauce", pos: "n", posFull: "noun", phonetic: "סוֹס", example: "The tomato sauce is tasty." },
+                    { he: "להריח", en: "smell", pos: "v", posFull: "verb", phonetic: "סְמֶל", example: "The flowers smell wonderful." },
+                    { he: "לטעום", en: "taste", pos: "v", posFull: "verb", phonetic: "טֵיסְט", example: "Taste the soup, please." }
+                ]
+            },
+            "3": {
+                name: "מאגר 3 (מבחן - 100 מילים)",
+                words: [
+                    { he: "ללוות", en: "accompany", pos: "v", posFull: "verb", phonetic: "אֲכַמְפָּנִי", example: "I will accompany you to the station." },
+                    { he: "מעבר ל-", en: "across", pos: "adv", posFull: "adverb", phonetic: "אֲכְרוֹס", example: "Walk across the street safely." },
+                    { he: "פעילות", en: "activity", pos: "n", posFull: "noun", phonetic: "אֶכְטִיבִיטִי", example: "Sports is a healthy activity." },
+                    { he: "אזור", en: "area", pos: "n", posFull: "noun", phonetic: "אֵרִיאָה", example: "This area is quiet and calm." },
+                    { he: "מסביב / בסביבה", en: "around", pos: "adv", posFull: "adverb", phonetic: "אֲרַאוּנְד", example: "Look around the room." },
+                    { he: "מאמר", en: "article", pos: "n", posFull: "noun", phonetic: "אַרְטִיקְל", example: "I read an article about space." },
+                    { he: "להיות מסוגל ל-", en: "be able to", pos: "exp", posFull: "expression", phonetic: "בִּי אֵייבְּל טוּ", example: "She will be able to join us." },
+                    { he: "להיות ממוקם ב-", en: "be located in", pos: "exp", posFull: "expression", phonetic: "בִּי לוֹכֵייטֶד אִין", example: "The museum is located in London." },
+                    { he: "להיות עשוי מ-", en: "be made of", pos: "exp", posFull: "expression", phonetic: "בִּי מֵייד אוֹב", example: "The desk is made of wood." },
+                    { he: "להיות נכון / מוכן ל-", en: "be willing to", pos: "exp", posFull: "expression", phonetic: "בִּי וִילִנְג טוּ", example: "He is willing to help us." },
+                    { he: "שווה את זה", en: "be worth it", pos: "exp", posFull: "expression", phonetic: "בִּי וּוֹרְת' אִיט", example: "Studying hard is worth it." },
+                    { he: "דם", en: "blood", pos: "n", posFull: "noun", phonetic: "בְּלַאד", example: "Blood brings oxygen to cells." },
+                    { he: "ספר / להזמין", en: "book", pos: "n", posFull: "noun", phonetic: "בּוּק", example: "Read a good book today." },
+                    { he: "הפסקה", en: "break", pos: "n", posFull: "noun", phonetic: "בְּרֵייכּ", example: "Let's take a 10 minute break." },
+                    { he: "גשר", en: "bridge", pos: "n", posFull: "noun", phonetic: "בְּרִידְג'", example: "Cross the bridge to the other side." },
+                    { he: "לשאת / לסחוב", en: "carry", pos: "v", posFull: "verb", phonetic: "כָּרִי", example: "Can you help me carry this box?" },
+                    { he: "טירה", en: "castle", pos: "n", posFull: "noun", phonetic: "כָּאסְל", example: "The king lived in a big castle." },
+                    { he: "מסוים / בטוח", en: "certain", pos: "adj", posFull: "adjective", phonetic: "סֶרְטֶן", example: "Are you certain about this answer?" },
+                    { he: "שף", en: "chef", pos: "n", posFull: "noun", phonetic: "שֶׁף", example: "The chef cooked a delicious meal." },
+                    { he: "ברור / בהיר", en: "clear", pos: "adj", posFull: "adjective", phonetic: "כְּלִיר", example: "The sky is very clear today." },
+                    { he: "שעת סגירה", en: "closing time", pos: "n", posFull: "noun", phonetic: "כְּלוֹזִנְג טַאמְנ", example: "The shop closing time is 8 PM." },
+                    { he: "נפוץ / משותף", en: "common", pos: "adj", posFull: "adjective", phonetic: "כָּאמוֹן", example: "Colds are common in winter." },
+                    { he: "שמנת / קרם", en: "cream", pos: "n", posFull: "noun", phonetic: "כְּרִים", example: "Add ice cream to the dessert." },
+                    { he: "סכנה", en: "danger", pos: "n", posFull: "noun", phonetic: "דֵיינְגֶ'ר", example: "Stay away from danger." },
+                    { he: "מסוכן", en: "dangerous", pos: "adj", posFull: "adjective", phonetic: "דֵיינְגֶ'רוּס", example: "Driving fast is dangerous." },
+                    { he: "בהחלט", en: "definitely", pos: "adv", posFull: "adverb", phonetic: "דֶפִינֶטְלִי", example: "I will definitely come tomorrow." },
+                    { he: "קינוח", en: "dessert", pos: "n", posFull: "noun", phonetic: "דִיזֶרְט", example: "Chocolate cake for dessert." },
+                    { he: "תעודה / דיפלומה", en: "diploma", pos: "n", posFull: "noun", phonetic: "דִפְּלוֹמָה", example: "He got his diploma after graduation." },
+                    { he: "מחלה", en: "disease", pos: "n", posFull: "noun", phonetic: "דִיזִיז", example: "Healthy food protects from disease." },
+                    { he: "מרחק", en: "distance", pos: "n", posFull: "noun", phonetic: "דִסְטַנְס", example: "What is the distance between cities?" },
+                    { he: "לעשות כמיטב יכולתו", en: "do (one's) best", pos: "exp", posFull: "expression", phonetic: "דוּ וַואנְז בֶּסְט", example: "Do your best on the test." },
+                    { he: "מקרה חירום", en: "emergency", pos: "n", posFull: "noun", phonetic: "אִימֶרְגֶ'נְסִי", example: "Call 100 in case of emergency." },
+                    { he: "אנרגיה / כוח", en: "energy", pos: "n", posFull: "noun", phonetic: "אֶנֶרְגִ'י", example: "Fruits give you healthy energy." },
+                    { he: "מאוורר / מעריץ", en: "fan", pos: "n", posFull: "noun", phonetic: "פָאן", example: "He is a huge sports fan." },
+                    { he: "פחד", en: "fear", pos: "n", posFull: "noun", phonetic: "פִיר", example: "Overcome your fear of public speaking." },
+                    { he: "בסדר / טוב", en: "fine", pos: "adj", posFull: "adjective", phonetic: "פַאיְן", example: "Everything will be fine." },
+                    { he: "חינם / חופשי", en: "free", pos: "adj", posFull: "adjective", phonetic: "פְרִי", example: "Entrance to the park is free." },
+                    { he: "טרי", en: "fresh", pos: "adj", posFull: "adjective", phonetic: "פְרֶשׁ", example: "Enjoy fresh orange juice." },
+                    { he: "להכיר", en: "get to know", pos: "exp", posFull: "expression", phonetic: "גֶט טוּ נוֹאוּ", example: "I want to get to know you better." },
+                    { he: "מכון כושר / אולם ספורט", en: "gym", pos: "n", posFull: "noun", phonetic: "גִ'ים", example: "We practice in the gym." },
+                    { he: "קשה / קשיח", en: "hard", pos: "adj", posFull: "adjective", phonetic: "הָארְד", example: "Math can be hard sometimes." },
+                    { he: "בריאות", en: "health", pos: "n", posFull: "noun", phonetic: "הֶלְת'", example: "Good health is very important." },
+                    { he: "עצמה", en: "herself", pos: "exp", posFull: "expression", phonetic: "הֶרְסֶלְף", example: "She did the homework herself." },
+                    { he: "עצמו", en: "himself", pos: "exp", posFull: "expression", phonetic: "הִמְסֶלְף", example: "He painted the room himself." },
+                    { he: "תחביב", en: "hobby", pos: "n", posFull: "noun", phonetic: "הָאבִּי", example: "My favorite hobby is reading." },
+                    { he: "אולם / אולם כנסים", en: "however", pos: "adv", posFull: "adverb", phonetic: "הַאוּאֶבֶר", example: "It was cold; however, we went out." },
+                    { he: "לפגוע / להכאיב", en: "hurt", pos: "v", posFull: "verb", phonetic: "הֶרְט", example: "Be careful not to hurt yourself." },
+                    { he: "לדמיין", en: "imagine", pos: "v", posFull: "verb", phonetic: "אִימֶדְגִ'ין", example: "Imagine living on Mars." },
+                    { he: "לשפר", en: "improve", pos: "v", posFull: "verb", phonetic: "אִמְפְּרוּבֿ", example: "Practice helps improve your grade." },
+                    { he: "למקרה ש-", en: "in case", pos: "exp", posFull: "expression", phonetic: "אִין כֵּייס", example: "Take a jacket in case it gets cold." },
+                    { he: "למעשה", en: "in fact", pos: "exp", posFull: "expression", phonetic: "אִין פַאכְּט", example: "In fact, it was very easy." },
+                    { he: "בזמן", en: "in time", pos: "exp", posFull: "expression", phonetic: "אִין טַאיְם", example: "Arrive in time for the show." },
+                    { he: "רכיבים", en: "ingredients", pos: "n", posFull: "noun", phonetic: "אִנְגְרִידִיאֶנְטְס", example: "Mix all cake ingredients together." },
+                    { he: "לכלול / לערב", en: "involve", pos: "v", posFull: "verb", phonetic: "אִנְ\u200fווֹלְבֿ", example: "The project involves teamwork." },
+                    { he: "עצמו / עצמה (לחפצים)", en: "itself", pos: "exp", posFull: "expression", phonetic: "אִטְסֶלְף", example: "The door closed by itself." },
+                    { he: "שמחה / גיל", en: "joy", pos: "n", posFull: "noun", phonetic: "ג'וֹי", example: "Playing games brings joy." },
+                    { he: "קילומטר", en: "kilometer", pos: "n", posFull: "noun", phonetic: "קִילוֹמִיטֶר", example: "We walked one kilometer." },
+                    { he: "קו / תור", en: "line", pos: "n", posFull: "noun", phonetic: "לַאיְן", example: "Wait in line for your turn." },
+                    { he: "מקומי", en: "local", pos: "adj", posFull: "adjective", phonetic: "לוֹכַּל", example: "Buy fresh produce from local market." },
+                    { he: "לוודא ש-", en: "make sure (that)", pos: "exp", posFull: "expression", phonetic: "מֵייכּ שׁוּר", example: "Make sure that the door is locked." },
+                    { he: "להצליח ל-", en: "manage (to)", pos: "v", posFull: "verb", phonetic: "מֶנֶדְג'", example: "Did you manage to finish in time?" },
+                    { he: "לפספס / להתגעגע", en: "miss", pos: "v", posFull: "verb", phonetic: "מִיס", example: "Don't miss the morning bus." },
+                    { he: "לזוז / להזיז / לעבור", en: "move", pos: "v", posFull: "verb", phonetic: "מוּבֿ", example: "Please move to the side." },
+                    { he: "עצמי", en: "myself", pos: "exp", posFull: "expression", phonetic: "מַאיְסֶלְף", example: "I built this model by myself." },
+                    { he: "הכרחי", en: "necessary", pos: "adj", posFull: "adjective", phonetic: "נֶסֶסֶרִי", example: "Water is necessary for life." },
+                    { he: "מובן מאליו / ברור", en: "obvious", pos: "adj", posFull: "adjective", phonetic: "אָבְוִויוּס", example: "The solution was obvious." },
+                    { he: "ברגל", en: "on foot", pos: "exp", posFull: "expression", phonetic: "אָן פוּט", example: "We came to school on foot." },
+                    { he: "יום אחד", en: "one day", pos: "exp", posFull: "expression", phonetic: "וַואן דֵיי", example: "One day I will travel the world." },
+                    { he: "לפתוח", en: "open", pos: "v", posFull: "verb", phonetic: "אוֹפֶּן", example: "Please open the window." },
+                    { he: "הזדמנות", en: "opportunity", pos: "n", posFull: "noun", phonetic: "אָפּוֹרְטוּנִיטִי", example: "This is a great opportunity." },
+                    { he: "רגיל / פשוט", en: "ordinary", pos: "adj", posFull: "adjective", phonetic: "אוֹרְדִינֶרִי", example: "It was an ordinary weekday." },
+                    { he: "לארגן", en: "organize", pos: "v", posFull: "verb", phonetic: "אוֹרְגַנַאיְז", example: "Organize your study desk." },
+                    { he: "עצמנו", en: "ourselves", pos: "exp", posFull: "expression", phonetic: "אָוּאַרְסֶלְבֿז", example: "We cooked dinner ourselves." },
+                    { he: "במהלך / מעל / יותר מ-", en: "over", pos: "adv", posFull: "adverb", phonetic: "אוֹבֶר", example: "Over 100 students came." },
+                    { he: "שביל", en: "path", pos: "n", posFull: "noun", phonetic: "פָּאת'", example: "Follow the path through the woods." },
+                    { he: "מטופל", en: "patient", pos: "n", posFull: "noun", phonetic: "פֵּייְשֶׁנְט", example: "The doctor saw the patient." },
+                    { he: "שלום / שלווה", en: "peace", pos: "n", posFull: "noun", phonetic: "פִּיס", example: "We all hope for world peace." },
+                    { he: "חתיכה / חלק", en: "piece", pos: "n", posFull: "noun", phonetic: "פִּיס", example: "Would you like a piece of cake?" },
+                    { he: "מרוצה", en: "pleased", pos: "adj", posFull: "adjective", phonetic: "פְּלִיזְד", example: "I am pleased with your work." },
+                    { he: "להגן", en: "protect", pos: "v", posFull: "verb", phonetic: "פְּרוֹטֶכְּט", example: "Wear a helmet to protect your head." },
+                    { he: "להגיע ל-", en: "reach", pos: "v", posFull: "verb", phonetic: "רִיטְשׁ", example: "Can you reach the top shelf?" },
+                    { he: "באמת", en: "really", pos: "adv", posFull: "adverb", phonetic: "רִיאֶלִי", example: "It is a really nice day." },
+                    { he: "רגיל", en: "regular", pos: "adj", posFull: "adjective", phonetic: "רֶגְיוּלַר", example: "Return to your regular schedule." },
+                    { he: "אחריות", en: "responsibility", pos: "n", posFull: "noun", phonetic: "רֶסְפָּאנְסִיבִּילִילִי", example: "Taking care of pets is a responsibility." },
+                    { he: "רוטב", en: "sauce", pos: "n", posFull: "noun", phonetic: "סוֹס", example: "Add tomato sauce to pasta." },
+                    { he: "פשוט", en: "simple", pos: "adj", posFull: "adjective", phonetic: "סִמְפְּל", example: "The instructions are very simple." },
+                    { he: "להריח", en: "smell", pos: "v", posFull: "verb", phonetic: "סְמֶל", example: "Flowers smell wonderful." },
+                    { he: "כדורגל", en: "soccer", pos: "n", posFull: "noun", phonetic: "סָאכֶּר", example: "We play soccer on Friday." },
+                    { he: "חלל / מקום", en: "space", pos: "n", posFull: "noun", phonetic: "סְפֵּייס", example: "There is space for one more." },
+                    { he: "להישאר", en: "stay", pos: "v", posFull: "verb", phonetic: "סְטֵיי", example: "Stay here until I return." },
+                    { he: "פתאום", en: "suddenly", pos: "adv", posFull: "adverb", phonetic: "סַדֶנְלִי", example: "Suddenly, the lights went off." },
+                    { he: "להציע", en: "suggest", pos: "v", posFull: "verb", phonetic: "סָאגֶ'סְט", example: "I suggest we study together." },
+                    { he: "לטעום", en: "taste", pos: "v", posFull: "verb", phonetic: "טֵיסְט", example: "Taste this delicious soup." },
+                    { he: "נורא", en: "terrible", pos: "adj", posFull: "adjective", phonetic: "טֶרִיבְּל", example: "It was a terrible mistake." },
+                    { he: "תיאטרון", en: "theater", pos: "n", posFull: "noun", phonetic: "תִ'יאֶטֶר", example: "We watched a play at the theater." },
+                    { he: "עצמם", en: "themselves", pos: "exp", posFull: "expression", phonetic: "תֶ'מְסֶלְבֿז", example: "They made dinner themselves." },
+                    { he: "כאב שיניים", en: "toothache", pos: "n", posFull: "noun", phonetic: "טוּתְ'אֵייכּ", example: "I need a dentist for toothache." },
+                    { he: "טיפוסי", en: "typical", pos: "adj", posFull: "adjective", phonetic: "טִיפִּיכַּל", example: "It was a typical summer day." },
+                    { he: "עצמך", en: "yourself", pos: "exp", posFull: "expression", phonetic: "יוֹרְסֶלְף", example: "Take good care of yourself." },
+                    { he: "עצמכם", en: "yourselves", pos: "exp", posFull: "expression", phonetic: "יוֹרְסֶלְבֿז", example: "Enjoy yourselves at the party." }
+                ]
+            },
+            "4": {
+                name: "מאגר 4 (21 מילים)",
+                words: [
+                    { he: "תאונה", en: "accident", pos: "n", posFull: "noun", phonetic: "אַקְסִידֶנְט", example: "There was an accident on the road." },
+                    { he: "מדהים", en: "amazing", pos: "adj", posFull: "adjective", phonetic: "אֲמֵיזִינְג", example: "The view was amazing." },
+                    { he: "תרבות", en: "culture", pos: "n", posFull: "noun", phonetic: "קַלְצְ'וּר", example: "Learning about a new culture is fun." },
+                    { he: "אירוע", en: "event", pos: "n", posFull: "noun", phonetic: "אִיבֶנְט", example: "The school event starts tonight." },
+                    { he: "טיסה", en: "flight", pos: "n", posFull: "noun", phonetic: "פְלַYט", example: "Our flight to London was on time." },
+                    { he: "לנסוע לחו\"ל", en: "go abroad", pos: "v", posFull: "verb", phonetic: "גּוֹ אֲבְרוֹד", example: "Many people go abroad in the summer." },
+                    { he: "מדריך", en: "guide", pos: "n", posFull: "noun", phonetic: "גָּיְד", example: "The tour guide showed us the museum." },
+                    { he: "ספריה", en: "library", pos: "n", posFull: "noun", phonetic: "לַיְבְּרָרִי", example: "I borrow books from the library." },
+                    { he: "להעלות פוסט", en: "post", pos: "v", posFull: "verb", phonetic: "פּוֹסְט", example: "Post a picture of your trip." },
+                    { he: "די", en: "quite", pos: "adj", posFull: "adjective", phonetic: "קְוַיְט", example: "The test was quite easy." },
+                    { he: "הקלטה", en: "recording", pos: "n", posFull: "noun", phonetic: "רִקּוֹרְדִין", example: "Listen to the recording carefully." },
+                    { he: "שקט", en: "silent", pos: "adj", posFull: "adjective", phonetic: "סַיְלֶנְט", example: "Please keep the classroom silent." },
+                    { he: "להישמע כמו", en: "sound like", pos: "v", posFull: "verb", phonetic: "סָאוּנְד לַיְק", example: "That sounds like a great idea." },
+                    { he: "הפתעה", en: "surprise", pos: "n", posFull: "noun", phonetic: "סַרְפַּיְז", example: "The party was a big surprise." },
+                    { he: "מפתיע", en: "surprising", pos: "adj", posFull: "adjective", phonetic: "סַרְפַּיְזִינְג", example: "It was a surprising result." },
+                    { he: "אטרקציות", en: "the sights", pos: "n", posFull: "noun", phonetic: "דּِه סַיְטְס", example: "We went to see the sights in Paris." },
+                    { he: "נושא", en: "topic", pos: "n", posFull: "noun", phonetic: "טוֹפִּיק", example: "Choose a topic for your project." },
+                    { he: "סיור", en: "tour", pos: "n", posFull: "noun", phonetic: "טוּר", example: "We took a walking tour of the city." },
+                    { he: "תייר", en: "tourist", pos: "n", posFull: "noun", phonetic: "טוּרִիսְט", example: "The tourist asked for directions." },
+                    { he: "להיות רגיל לעשות", en: "used to", pos: "v", posFull: "verb", phonetic: "יוּזְד טוּ", example: "I am used to waking up early." },
+                    { he: "חתונה", en: "wedding", pos: "n", posFull: "noun", phonetic: "וֶדִין", example: "We attended a beautiful wedding." }
+                ]
+            },
+            "5": {
+                name: "מאגר 5 (30 מילים - ברירת מחדל)",
+                words: [
+                    { he: "לגלות", en: "discover", pos: "v", posFull: "verb", phonetic: "דִיסְקָבֶר", example: "Scientists discover new planets." },
+                    { he: "לחקור", en: "explore", pos: "v", posFull: "verb", phonetic: "אֶקְסְפְּלוֹר", example: "Let's explore the old castle." },
+                    { he: "מפעל", en: "factory", pos: "n", posFull: "noun", phonetic: "פָּקְטוֹרִי", example: "Cars are made in this factory." },
+                    { he: "סוג", en: "form", pos: "n", posFull: "noun", phonetic: "פֹּורְם", example: "What form of art do you like?" },
+                    { he: "מאות", en: "hundreds", pos: "n", posFull: "noun", phonetic: "הַנְדְרֶדְז", example: "Hundreds of people visited the museum." },
+                    { he: "ליידע", en: "let (smb) know", pos: "v", posFull: "verb", phonetic: "לֶט נֹאו", example: "Let me know when you arrive." },
+                    { he: "פריט", en: "object", pos: "n", posFull: "noun", phonetic: "אַבְּגֶ'קְט", example: "He found an unusual object." },
+                    { he: "סוד", en: "secret", pos: "n", posFull: "noun", phonetic: "סִיקְרֶט", example: "Can you keep a secret?" },
+                    { he: "עד כה", en: "so far", pos: "exp", posFull: "expression", phonetic: "סֹוא פָּאר", example: "So far, the test is easy." },
+                    { he: "עד", en: "until", pos: "adv", posFull: "adverb", phonetic: "אַנְטִיל", example: "Wait here until I come back." },
+                    { he: "מסרק", en: "comb", pos: "n", posFull: "noun", phonetic: "קֹומ", example: "I need a comb for my hair." },
+                    { he: "לסרק", en: "comb", pos: "v", posFull: "verb", phonetic: "קֹומ", example: "Comb your hair before going out." },
+                    { he: "עותק", en: "copy", pos: "n", posFull: "noun", phonetic: "קֹופִּי", example: "I need a copy of this book." },
+                    { he: "להעתיק", en: "copy", pos: "v", posFull: "verb", phonetic: "קֹופִּי", example: "Copy the sentences into your notebook." },
+                    { he: "שיעול", en: "cough", pos: "n", posFull: "noun", phonetic: "קֹופ", example: "He has a bad cough." },
+                    { he: "להשתעל", en: "cough", pos: "v", posFull: "verb", phonetic: "קֹופ", example: "Cover your mouth when you cough." },
+                    { he: "עיכוב", en: "delay", pos: "n", posFull: "noun", phonetic: "דִּילֵי", example: "There was a delay on the train." },
+                    { he: "לעכב, לדחות", en: "delay", pos: "v", posFull: "verb", phonetic: "דִּילֵי", example: "Do not delay your homework." },
+                    { he: "בדיחה", en: "joke", pos: "n", posFull: "noun", phonetic: "דְז'וֹוק", example: "He told a funny joke." },
+                    { he: "להתבדח", en: "joke", pos: "v", posFull: "verb", phonetic: "דְז'וֹוק", example: "He likes to joke with friends." },
+                    { he: "הבטחה", en: "promise", pos: "n", posFull: "noun", phonetic: "פּרֹומִיס", example: "A promise is a promise." },
+                    { he: "להבטיח", en: "promise", pos: "v", posFull: "verb", phonetic: "פּרֹומִיס", example: "I promise to help you." },
+                    { he: "תגובה", en: "reply", pos: "n", posFull: "noun", phonetic: "רִפּלַי", example: "I am waiting for your reply." },
+                    { he: "להגיב", en: "reply", pos: "v", posFull: "verb", phonetic: "רִפּלַי", example: "Please reply to my email." },
+                    { he: "פרוסה", en: "slice", pos: "n", posFull: "noun", phonetic: "סְלַיְס", example: "Would you like a slice of pizza?" },
+                    { he: "לפרוס", en: "slice", pos: "v", posFull: "verb", phonetic: "סְלַיְס", example: "Slice the bread carefully." },
+                    { he: "אמון", en: "trust", pos: "n", posFull: "noun", phonetic: "טְרָასְט", example: "Trust is important in friendship." },
+                    { he: "לבטוח", en: "trust", pos: "v", posFull: "verb", phonetic: "טְרָასְט", example: "You can trust me." },
+                    { he: "הצבעה", en: "vote", pos: "n", posFull: "noun", phonetic: "וֹובֹוט", example: "The vote will take place tomorrow." },
+                    { he: "להצביע", en: "vote", pos: "v", posFull: "verb", phonetic: "וֹובֹוט", example: "Every citizen can vote." }
+                ]
+            }
+        };
+
+        let selectedBankKey = '5';
+        let selectedCategoryKey = 'all';
+        let activeWordPool = [...wordBanks['5'].words];
+        let mistakeWords = [];
+        let favoriteWords = [];
+
+        let userState = { username: 'harel', playerName: 'הראל', avatar: '👑', streak: 0, bestStreak: 0, totalAnswers: 0, correctAnswers: 0, sfxEnabled: true };
+        let appSettings = { autoAdvance: false, bgColor: 'cyan', hideFeedback: false, showPos: true };
+
+        let currentTab = 'quiz';
+
+        let quizSavedState = null;
+        let mcqSavedState = null;
+        let hangmanSavedState = null;
+        let listenSavedState = null;
+        let matchSavedState = null;
+        let timeSavedState = null;
+
+        let matchRounds = [];
+        let currentMatchRoundIndex = 0;
+        let totalMatchedPairsAllRounds = 0;
+        let selectedHebrewCard = null;
+        let selectedEnglishCard = null;
+
+        let quizIndex = 0;
+        let quizScore = 0;
+        let questionAttempts = 0;
+        let currentQuizSpeechRate = 1.0;
+        let quizHistory = [];
+
+        let mcqIndex = 0;
+        let mcqCurrentWord = null;
+
+        let hangmanIndex = 0;
+        let currentHangmanWord = null;
+        let wrongGuesses = 0;
+        let guessedLetters = [];
+
+        let timeAttackTimer = null;
+        let timeScore = 0;
+        let timeCurrentWord = null;
+
+        let listenIndex = 0;
+        let listenCurrentWord = null;
+
+        let studyIndex = 0;
+        let autoPlayInterval = null;
+
+        function saveUserState() {
+            try {
+                localStorage.setItem('vocab_quiz_userState', JSON.stringify(userState));
+                localStorage.setItem('vocab_quiz_appSettings', JSON.stringify(appSettings));
+                localStorage.setItem('vocab_quiz_favorites', JSON.stringify(favoriteWords));
+            } catch(e){}
+        }
+
+        function loadUserState() {
+            try {
+                const savedState = localStorage.getItem('vocab_quiz_userState');
+                const savedSettings = localStorage.getItem('vocab_quiz_appSettings');
+                const savedFavorites = localStorage.getItem('vocab_quiz_favorites');
+
+                if (savedFavorites) favoriteWords = JSON.parse(savedFavorites);
+                if (savedSettings) appSettings = { ...appSettings, ...JSON.parse(savedSettings) };
+                if (savedState) userState = { ...userState, ...JSON.parse(savedState) };
+            } catch(e){}
+        }
+
+        function verifyAppAccess(e) {
+            if (e) e.preventDefault();
+            const input = document.getElementById('auth-code-input').value.trim();
+            const errorMsg = document.getElementById('auth-error-msg');
+            
+            if (input === "rf9n") {
+                playSound('correct');
+                document.getElementById('auth-screen').classList.add('hidden');
+                const userInput = document.getElementById('user-input');
+                if (userInput) userInput.focus();
+            } else {
+                playSound('wrong');
+                errorMsg.classList.remove('hidden');
+                document.getElementById('auth-code-input').classList.add('animate-shake');
+                setTimeout(() => document.getElementById('auth-code-input').classList.remove('animate-shake'), 400);
+            }
+        }
+
+        function openHelpModal() {
+            playSound('click');
+            document.getElementById('help-modal').classList.remove('hidden');
+        }
+
+        function closeHelpModal() {
+            playSound('click');
+            document.getElementById('help-modal').classList.add('hidden');
+        }
+
+        function toggleFavoriteWord(he, en) {
+            playSound('click');
+            let found = null;
+            Object.keys(wordBanks).forEach(k => {
+                const match = wordBanks[k].words.find(w => w.en === en && w.he === he);
+                if (match) found = match;
+            });
+            if (!found) return;
+
+            const idx = favoriteWords.findIndex(w => w.en === found.en && w.he === found.he);
+            if (idx !== -1) favoriteWords.splice(idx, 1);
+            else favoriteWords.push(found);
+
+            saveUserState();
+            renderWordsTab();
+            if (currentTab === 'study') updateStudyCardFavoriteBtn();
+        }
+
+        function toggleFavoriteCurrentCard(e) {
+            if (e) e.stopPropagation();
+            const current = activeWordPool[studyIndex];
+            if (current) {
+                toggleFavoriteWord(current.he, current.en);
+                updateStudyCardFavoriteBtn();
+            }
+        }
+
+        function updateStudyCardFavoriteBtn() {
+            const current = activeWordPool[studyIndex];
+            const btn = document.getElementById('card-favorite-btn');
+            if (!btn || !current) return;
+            const isFav = favoriteWords.some(w => w.en === current.en && w.he === current.he);
+            btn.innerHTML = isFav ? '⭐' : '☆';
+            btn.className = isFav ? "p-1.5 bg-amber-200 text-amber-900 rounded-xl text-xs font-bold shadow-sm" : "p-1.5 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl text-xs font-bold shadow-sm";
+        }
+
+        function updateCategoryOptionsForBank(bankKey) {
+            const catSelect = document.getElementById('global-category-select');
+            if (!catSelect) return;
+            if (bankKey === '2') {
+                catSelect.innerHTML = `<option value="all" selected>כל המאגר (30 מילים)</option><option value="dual">משמעויות כפולות (22 מילים)</option><option value="kitchen">אוכל ומטבח (8 מילים)</option><option value="favorites">מילים מעודפות</option>`;
+            } else if (bankKey === '5') {
+                catSelect.innerHTML = `<option value="all" selected>כל המאגר (30 מילים)</option><option value="dual5">2 פירושים (20 מילים)</option><option value="general5">מילים כלליות (10 מילים)</option><option value="favorites">מילים מעודפות</option>`;
+            } else if (bankKey === 'all') {
+                catSelect.innerHTML = `<option value="all" selected>כל המאגרים המשולבים</option><option value="favorites">מילים מעודפות</option>`;
+            } else {
+                let count = wordBanks[bankKey] ? wordBanks[bankKey].words.length : 30;
+                catSelect.innerHTML = `<option value="all" selected>כל המאגר (${count} מילים)</option><option value="favorites">מילים מעודפות</option>`;
+            }
+        }
+
+        function handleGlobalBankChange(value) {
+            playSound('click');
+            selectedBankKey = value;
+            updateCategoryOptionsForBank(value);
+            selectedCategoryKey = 'all';
+            document.getElementById('global-category-select').value = 'all';
+            activeWordPool = getWordsForCategoryKey('all');
+            updateSubsetBanner();
+            quizSavedState = null; mcqSavedState = null; hangmanSavedState = null; listenSavedState = null; matchSavedState = null; timeSavedState = null;
+            switchTab(currentTab, false);
+        }
+
+        function handleGlobalCategoryChange(catKey) {
+            playSound('click');
+            selectedCategoryKey = catKey;
+            activeWordPool = getWordsForCategoryKey(catKey);
+            updateSubsetBanner();
+            quizSavedState = null; mcqSavedState = null; hangmanSavedState = null; listenSavedState = null; matchSavedState = null; timeSavedState = null;
+            switchTab(currentTab, false);
+        }
+
+        function getWordsForBankKey(key) {
+            if (key === 'all') {
+                let combined = [];
+                Object.keys(wordBanks).forEach(k => combined = combined.concat(wordBanks[k].words));
+                return combined;
+            }
+            return wordBanks[key] ? [...wordBanks[key].words] : [...wordBanks['5'].words];
+        }
+
+        function getWordsForCategoryKey(catKey) {
+            const baseWords = getWordsForBankKey(selectedBankKey);
+            if (catKey === 'favorites') {
+                if (selectedBankKey === 'all') return favoriteWords.length > 0 ? [...favoriteWords] : [];
+                return favoriteWords.filter(fw => baseWords.some(bw => bw.en === fw.en && bw.he === fw.he));
+            }
+            if (selectedBankKey === '2') {
+                if (catKey === 'dual') return baseWords.slice(0, 22);
+                if (catKey === 'kitchen') return baseWords.slice(22, 30);
+            }
+            if (selectedBankKey === '5') {
+                if (catKey === 'dual5') return baseWords.slice(10, 30);
+                if (catKey === 'general5') return baseWords.slice(0, 10);
+            }
+            return baseWords;
+        }
+
+        function openShareModal() { 
+            playSound('click'); 
+            document.getElementById('share-modal')?.classList.remove('hidden'); 
+        }
+        
+        function closeShareModal() { 
+            document.getElementById('share-modal')?.classList.add('hidden'); 
+        }
+
+        function applyTheme() {
+            const body = document.getElementById('app-body');
+            if (!body) return;
+            body.className = "min-h-screen flex items-center justify-center p-2 sm:p-4 transition-all duration-500 ";
+            if (appSettings.bgColor === 'dark') {
+                body.classList.add('bg-gradient-to-br', 'from-slate-950', 'via-slate-900', 'to-indigo-950', 'text-slate-100', 'dark-theme');
+            } else if (appSettings.bgColor === 'light') {
+                body.classList.add('bg-gradient-to-br', 'from-slate-100', 'via-gray-50', 'to-slate-200');
+            } else if (appSettings.bgColor === 'purple') {
+                body.classList.add('bg-gradient-to-br', 'from-purple-100', 'via-fuchsia-50', 'to-indigo-100');
+            } else {
+                body.classList.add('bg-gradient-to-br', 'from-cyan-50', 'via-sky-50', 'to-indigo-100');
+            }
+        }
+
+        function playSound(type) {
+            if (!userState.sfxEnabled) return;
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                const now = ctx.currentTime;
+                if (type === 'click') {
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(200, now + 0.05);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                    osc.start(now); osc.stop(now + 0.05);
+                } else if (type === 'correct') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.08);
+                    osc.frequency.setValueAtTime(783.99, now + 0.16);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now); osc.stop(now + 0.3);
+                } else if (type === 'wrong') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.linearRampToValueAtTime(110, now + 0.2);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now); osc.stop(now + 0.25);
+                }
+            } catch(e) {}
+        }
+
+        function speakText(text, rate = 1.0) {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            utterance.rate = rate;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function toggleAudioSFX() {
+            userState.sfxEnabled = !userState.sfxEnabled;
+            saveUserState();
+            updateHeaderUI();
+            playSound('click');
+        }
+
+        function getDisplayEnglish(word) {
+            if (!word) return '';
+            return appSettings.showPos ? `${word.en} (${word.pos})` : word.en;
+        }
+
+        function triggerConfetti() {
+            if (typeof confetti === 'function') confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+        }
+
+        function shuffle(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function updateStreak(isCorrect) {
+            if (isCorrect) {
+                userState.streak++;
+                if (userState.streak > userState.bestStreak) userState.bestStreak = userState.streak;
+            } else {
+                userState.streak = 0;
+            }
+            updateHeaderUI();
+            saveUserState();
+        }
+
+        function updateHeaderUI() {
+            const streakCounter = document.getElementById('streak-counter');
+            if (streakCounter) {
+                if (userState.streak > 0) {
+                    streakCounter.classList.remove('hidden');
+                    streakCounter.classList.add('flex');
+                    document.getElementById('streak-val').innerText = userState.streak;
+                } else {
+                    streakCounter.classList.add('hidden');
+                    streakCounter.classList.remove('flex');
+                }
+            }
+            document.getElementById('sound-btn').innerText = userState.sfxEnabled ? '🔊' : '🔇';
+        }
+
+        function saveCurrentTabState() {
+            if (currentTab === 'quiz') {
+                quizSavedState = { quizIndex, quizScore, questionAttempts, quizHistory: [...quizHistory], activeWordPool: [...activeWordPool] };
+            } else if (currentTab === 'mcq') {
+                mcqSavedState = { mcqIndex, mcqCurrentWord, activeWordPool: [...activeWordPool] };
+            } else if (currentTab === 'assemble') {
+                hangmanSavedState = { hangmanIndex, wrongGuesses, guessedLetters: [...guessedLetters], currentHangmanWord, activeWordPool: [...activeWordPool] };
+            } else if (currentTab === 'listen') {
+                listenSavedState = { listenIndex, listenCurrentWord, activeWordPool: [...activeWordPool] };
+            } else if (currentTab === 'match') {
+                matchSavedState = { matchRounds, currentMatchRoundIndex, totalMatchedPairsAllRounds };
+            } else if (currentTab === 'time') {
+                timeSavedState = { timeScore, timeCurrentWord };
+            }
+        }
+
+        function switchTab(tab, resetPool = true) {
+            playSound('click');
+            saveCurrentTabState();
+
+            if (currentTab === 'time' && timeAttackTimer && tab !== 'time') {
+                clearInterval(timeAttackTimer);
+                timeAttackTimer = null;
+            }
+
+            currentTab = tab;
+
+            if (resetPool && !['quiz', 'mcq', 'assemble', 'listen', 'match', 'time'].includes(tab)) {
+                activeWordPool = getWordsForCategoryKey(selectedCategoryKey);
+                updateSubsetBanner();
+            }
+
+            ['quiz', 'mcq', 'assemble', 'time', 'listen', 'match', 'study', 'profile', 'words'].forEach(t => {
+                document.getElementById(`${t}-section`)?.classList.add('hidden');
+                const btn = document.getElementById(`tab-${t}-btn`);
+                if (btn) btn.className = "flex-1 min-w-[65px] py-1.5 px-1.5 rounded-xl font-bold text-slate-600 hover:text-slate-900 text-center";
+            });
+
+            const targetSection = document.getElementById(`${tab}-section`);
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+                targetSection.classList.remove('animate-tab-in');
+                void targetSection.offsetWidth;
+                targetSection.classList.add('animate-tab-in');
+            }
+            const activeBtn = document.getElementById(`tab-${tab}-btn`);
+            if (activeBtn) activeBtn.className = "flex-1 min-w-[65px] py-1.5 px-1.5 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md text-center";
+
+            if (tab === 'quiz') {
+                if (quizSavedState && !resetPool) restoreQuizState();
+                else initQuiz(activeWordPool);
+            } else if (tab === 'mcq') {
+                if (mcqSavedState && !resetPool) restoreMcqState();
+                else initMcqMode(activeWordPool);
+            } else if (tab === 'assemble') {
+                if (hangmanSavedState && !resetPool) restoreHangmanState();
+                else initHangmanMode(activeWordPool);
+            } else if (tab === 'listen') {
+                if (listenSavedState && !resetPool) restoreListenState();
+                else initListeningQuiz(activeWordPool);
+            } else if (tab === 'match') {
+                if (matchSavedState && !resetPool) restoreMatchState();
+                else initMatchGame(activeWordPool);
+            } else if (tab === 'study') {
+                initStudyMode(activeWordPool);
+            } else if (tab === 'profile') {
+                renderProfileStats();
+            } else if (tab === 'words') {
+                renderWordsTab();
+            }
+        }
+
+        function restoreQuizState() {
+            if (!quizSavedState) { initQuiz(activeWordPool); return; }
+            quizIndex = quizSavedState.quizIndex;
+            quizScore = quizSavedState.quizScore;
+            questionAttempts = quizSavedState.questionAttempts;
+            quizHistory = quizSavedState.quizHistory;
+            activeWordPool = quizSavedState.activeWordPool;
+            document.getElementById('quiz-screen')?.classList.remove('hidden');
+            document.getElementById('completion-screen')?.classList.add('hidden');
+            renderQuizQuestion();
+        }
+
+        function restoreMcqState() {
+            if (!mcqSavedState) { initMcqMode(activeWordPool); return; }
+            mcqIndex = mcqSavedState.mcqIndex;
+            mcqCurrentWord = mcqSavedState.mcqCurrentWord;
+            activeWordPool = mcqSavedState.activeWordPool;
+            renderMcqQuestion();
+        }
+
+        function restoreHangmanState() {
+            if (!hangmanSavedState) { initHangmanMode(activeWordPool); return; }
+            hangmanIndex = hangmanSavedState.hangmanIndex;
+            wrongGuesses = hangmanSavedState.wrongGuesses;
+            guessedLetters = hangmanSavedState.guessedLetters;
+            currentHangmanWord = hangmanSavedState.currentHangmanWord;
+            activeWordPool = hangmanSavedState.activeWordPool;
+            document.getElementById('assemble-progress-badge').innerText = `שאלה ${hangmanIndex + 1} / ${activeWordPool.length}`;
+            document.getElementById('assemble-hebrew-word').innerText = currentHangmanWord.he;
+            document.getElementById('assemble-feedback-box')?.classList.add('hidden');
+            updateHangmanDrawing();
+            renderHangmanUI();
+        }
+
+        function restoreListenState() {
+            if (!listenSavedState) { initListeningQuiz(activeWordPool); return; }
+            listenIndex = listenSavedState.listenIndex;
+            listenCurrentWord = listenSavedState.listenCurrentWord;
+            document.getElementById('listen-score-badge').innerText = `שאלה ${listenIndex + 1} / ${activeWordPool.length}`;
+            let dist = shuffle(activeWordPool.filter(w => w.en !== listenCurrentWord.en)).slice(0, 3);
+            let options = shuffle([listenCurrentWord, ...dist]);
+            document.getElementById('listen-options-grid').innerHTML = options.map(opt => `<button onclick="handleListenOptionSelect('${opt.en.replace(/'/g, "\\'")}')" class="p-3 bg-white hover:bg-teal-50 border-2 border-slate-200 hover:border-teal-400 rounded-2xl text-slate-800 font-extrabold text-xs shadow-sm text-center">${opt.he}</button>`).join('');
+        }
+
+        function restoreMatchState() {
+            if (!matchSavedState) { initMatchGame(activeWordPool); return; }
+            matchRounds = matchSavedState.matchRounds;
+            currentMatchRoundIndex = matchSavedState.currentMatchRoundIndex;
+            totalMatchedPairsAllRounds = matchSavedState.totalMatchedPairsAllRounds;
+            document.getElementById('match-completion-screen')?.classList.add('hidden');
+            document.getElementById('matching-board-wrapper')?.classList.remove('hidden');
+            loadMatchRound(currentMatchRoundIndex);
+        }
+
+        function updateSubsetBanner() {
+            const banner = document.getElementById('practice-subset-banner');
+            const bannerText = document.getElementById('subset-banner-text');
+            if (!banner || !bannerText) return;
+            const categoryTotal = getWordsForCategoryKey(selectedCategoryKey).length;
+            if (activeWordPool.length < categoryTotal && selectedCategoryKey !== 'favorites') {
+                banner.classList.remove('hidden');
+                bannerText.innerText = `מתאמן על ${activeWordPool.length} מילים שטעית בהן`;
+            } else {
+                banner.classList.add('hidden');
+            }
+        }
+
+        function resetToSelectedBank() {
+            playSound('click');
+            activeWordPool = getWordsForCategoryKey(selectedCategoryKey);
+            mistakeWords = [];
+            quizSavedState = null; mcqSavedState = null; hangmanSavedState = null; listenSavedState = null; matchSavedState = null; timeSavedState = null;
+            updateSubsetBanner();
+            switchTab(currentTab, false);
+        }
+
+        /* --- MCQ Mode (בחירה) --- */
+        function initMcqMode(pool) {
+            mcqIndex = 0;
+            const activePool = pool || activeWordPool;
+            if (activePool.length === 0) return;
+            activeWordPool = shuffle([...activePool]);
+            renderMcqQuestion();
+        }
+
+        function renderMcqQuestion() {
+            if (mcqIndex >= activeWordPool.length) {
+                playSound('correct'); triggerConfetti();
+                mcqIndex = 0;
+            }
+            mcqCurrentWord = activeWordPool[mcqIndex];
+            document.getElementById('mcq-progress-badge').innerText = `שאלה ${mcqIndex + 1} / ${activeWordPool.length}`;
+            document.getElementById('mcq-word-english').innerText = getDisplayEnglish(mcqCurrentWord);
+            document.getElementById('mcq-feedback-box')?.classList.add('hidden');
+
+            let distractors = shuffle(activeWordPool.filter(w => w.he !== mcqCurrentWord.he));
+            let uniqueDistractors = [];
+            for (let w of distractors) {
+                if (!uniqueDistractors.some(d => d.he === w.he)) uniqueDistractors.push(w);
+                if (uniqueDistractors.length === 3) break;
+            }
+
+            let options = shuffle([mcqCurrentWord, ...uniqueDistractors]);
+            const optionsGrid = document.getElementById('mcq-options-grid');
+            if (optionsGrid) {
+                optionsGrid.innerHTML = options.map(opt => `
+                    <button onclick="handleMcqOptionSelect('${opt.he.replace(/'/g, "\\'")}', this)" class="mcq-option-btn p-3 bg-white hover:bg-blue-50 border-2 border-slate-200 hover:border-blue-400 rounded-2xl text-slate-800 font-extrabold text-xs shadow-sm text-center">
+                        ${opt.he}
+                    </button>
+                `).join('');
+            }
+        }
+
+        function speakMcqWord() {
+            if (mcqCurrentWord) speakText(mcqCurrentWord.en);
+        }
+
+        function handleMcqOptionSelect(selectedHebrew, btnElement) {
+            const feedbackBox = document.getElementById('mcq-feedback-box');
+            const allBtns = document.querySelectorAll('.mcq-option-btn');
+            allBtns.forEach(btn => btn.disabled = true);
+
+            userState.totalAnswers++;
+            if (selectedHebrew === mcqCurrentWord.he) {
+                playSound('correct');
+                userState.correctAnswers++;
+                updateStreak(true);
+                btnElement.className = "p-3 bg-emerald-100 border-2 border-emerald-500 text-emerald-900 font-extrabold text-xs rounded-2xl text-center shadow-sm";
+                if (feedbackBox) {
+                    feedbackBox.className = "p-3 rounded-2xl text-center font-bold text-xs bg-emerald-50 text-emerald-800 border-emerald-300 border animate-pop-up";
+                    feedbackBox.innerText = `✨ תשובה נכונה!`;
+                    feedbackBox.classList.remove('hidden');
+                }
+                setTimeout(() => { mcqIndex++; renderMcqQuestion(); }, 1200);
+            } else {
+                playSound('wrong');
+                updateStreak(false);
+                if (!mistakeWords.includes(mcqCurrentWord)) mistakeWords.push(mcqCurrentWord);
+                btnElement.className = "p-3 bg-rose-100 border-2 border-rose-500 text-rose-900 font-extrabold text-xs rounded-2xl text-center shadow-sm animate-shake";
+                allBtns.forEach(btn => {
+                    if (btn.innerText.trim() === mcqCurrentWord.he) {
+                        btn.className = "p-3 bg-emerald-100 border-2 border-emerald-500 text-emerald-900 font-extrabold text-xs rounded-2xl text-center shadow-sm";
+                    }
+                });
+                if (feedbackBox) {
+                    feedbackBox.className = "p-3 rounded-2xl text-center font-bold text-xs bg-rose-50 text-rose-800 border-rose-300 border animate-pop-up";
+                    feedbackBox.innerText = `❌ תשובה שגויה! התרגום הנכון הוא: ${mcqCurrentWord.he}`;
+                    feedbackBox.classList.remove('hidden');
+                }
+                setTimeout(() => { mcqIndex++; renderMcqQuestion(); }, 2000);
+            }
+        }
+
+        function skipMcqQuestion() {
+            playSound('click');
+            if (!mistakeWords.includes(mcqCurrentWord)) mistakeWords.push(mcqCurrentWord);
+            updateStreak(false);
+            mcqIndex++;
+            renderMcqQuestion();
+        }
+
+        function initHangmanMode(pool) {
+            hangmanIndex = 0;
+            const activePool = pool || activeWordPool;
+            if (activePool.length === 0) return;
+            activeWordPool = shuffle([...activePool]);
+            renderHangmanQuestion();
+        }
+
+        function renderHangmanQuestion() {
+            if (hangmanIndex >= activeWordPool.length) {
+                playSound('correct'); triggerConfetti();
+                hangmanIndex = 0;
+            }
+            currentHangmanWord = activeWordPool[hangmanIndex];
+            wrongGuesses = 0;
+            guessedLetters = [];
+
+            document.getElementById('assemble-progress-badge').innerText = `שאלה ${hangmanIndex + 1} / ${activeWordPool.length}`;
+            document.getElementById('assemble-hebrew-word').innerText = currentHangmanWord.he;
+            document.getElementById('assemble-feedback-box')?.classList.add('hidden');
+            updateHangmanDrawing();
+            renderHangmanUI();
+        }
+
+        function updateHangmanDrawing() {
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`part-${i}`)?.classList.toggle('hidden', i > wrongGuesses);
+            }
+        }
+
+        function renderHangmanUI() {
+            const answerBox = document.getElementById('assemble-answer-box');
+            const lettersGrid = document.getElementById('assemble-letters-grid');
+            const targetEn = currentHangmanWord.en.toLowerCase();
+
+            if (answerBox) {
+                let html = '';
+                for (let i = 0; i < targetEn.length; i++) {
+                    const char = targetEn[i];
+                    if (/[a-z]/.test(char)) {
+                        const revealed = guessedLetters.includes(char);
+                        html += `<span class="w-7 h-9 border-b-4 border-indigo-600 flex items-center justify-center text-base">${revealed ? char.toUpperCase() : '_'}</span>`;
+                    } else {
+                        html += `<span class="w-3 flex items-center justify-center"></span>`;
+                    }
+                }
+                answerBox.innerHTML = html;
+            }
+
+            if (lettersGrid) {
+                const rows = [['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'], ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'], ['z', 'x', 'c', 'v', 'b', 'n', 'm']];
+                lettersGrid.innerHTML = rows.map(r => `<div class="flex justify-center gap-1 w-full">${r.map(l => {
+                    const isGuessed = guessedLetters.includes(l);
+                    return `<button onclick="guessHangmanLetter('${l}')" ${isGuessed ? 'disabled' : ''} class="w-7 h-8 sm:w-8 sm:h-8 rounded-lg font-black text-xs uppercase flex items-center justify-center shadow-sm ${isGuessed ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed' : 'bg-white hover:bg-purple-100 border-2 border-purple-300 text-slate-950'}">${l}</button>`;
+                }).join('')}</div>`).join('');
+            }
+        }
+
+        function guessHangmanLetter(letter) {
+            if (guessedLetters.includes(letter) || wrongGuesses >= 6) return;
+            guessedLetters.push(letter);
+            const targetEn = currentHangmanWord.en.toLowerCase();
+            const feedbackBox = document.getElementById('assemble-feedback-box');
+
+            if (targetEn.includes(letter)) {
+                playSound('click');
+                renderHangmanUI();
+                if (targetEn.replace(/[^a-z]/g, '').split('').every(ch => guessedLetters.includes(ch))) {
+                    playSound('correct'); speakText(currentHangmanWord.en);
+                    userState.correctAnswers++; updateStreak(true);
+                    if (feedbackBox) {
+                        feedbackBox.className = "p-3 rounded-2xl text-center font-bold text-xs bg-emerald-50 text-emerald-800 border-emerald-300 border animate-pop-up";
+                        feedbackBox.innerText = `✨ מעולה! ניחשת נכון: ${currentHangmanWord.en}`;
+                        feedbackBox.classList.remove('hidden');
+                    }
+                    setTimeout(() => { hangmanIndex++; renderHangmanQuestion(); }, 1400);
+                }
+            } else {
+                playSound('wrong');
+                wrongGuesses++;
+                updateHangmanDrawing();
+                renderHangmanUI();
+                if (wrongGuesses >= 6) {
+                    updateStreak(false);
+                    if (!mistakeWords.includes(currentHangmanWord)) mistakeWords.push(currentHangmanWord);
+                    if (feedbackBox) {
+                        feedbackBox.className = "p-3 rounded-2xl text-center font-bold text-xs bg-rose-50 text-rose-800 border-rose-300 border animate-pop-up";
+                        feedbackBox.innerText = `❌ נפסלת! התשובה הנכונה: ${currentHangmanWord.en}`;
+                        feedbackBox.classList.remove('hidden');
+                    }
+                    setTimeout(() => { hangmanIndex++; renderHangmanQuestion(); }, 2000);
+                }
+            }
+        }
+
+        function skipAssembleQuestion() {
+            playSound('click');
+            if (!mistakeWords.includes(currentHangmanWord)) mistakeWords.push(currentHangmanWord);
+            updateStreak(false);
+            hangmanIndex++;
+            renderHangmanQuestion();
+        }
+
+        function initMatchGame(pool) {
+            const wordList = pool || activeWordPool;
+            const shuffledPool = shuffle([...wordList]);
+            matchRounds = [];
+            let poolCopy = [...shuffledPool];
+            for (let i = 0; i < 5; i++) {
+                if (poolCopy.length >= 4) matchRounds.push(poolCopy.splice(0, 4));
+                else if (poolCopy.length > 0) matchRounds.push(poolCopy.splice(0, poolCopy.length));
+            }
+            if (poolCopy.length > 0) matchRounds.push(poolCopy);
+            currentMatchRoundIndex = 0;
+            totalMatchedPairsAllRounds = 0;
+            document.getElementById('match-completion-screen')?.classList.add('hidden');
+            document.getElementById('matching-board-wrapper')?.classList.remove('hidden');
+            loadMatchRound(currentMatchRoundIndex);
+        }
+
+        function loadMatchRound(index) {
+            if (index >= matchRounds.length) { showMatchCompletion(); return; }
+            const currentWords = matchRounds[index];
+            selectedHebrewCard = null; selectedEnglishCard = null;
+
+            document.getElementById('match-round-badge').innerText = `סיבוב ${index + 1} מתוך ${matchRounds.length}`;
+            document.getElementById('match-score-badge').innerText = `זוגות: ${totalMatchedPairsAllRounds}`;
+
+            const hebrewCol = document.getElementById('hebrew-column');
+            const englishCol = document.getElementById('english-column');
+            const hebWords = shuffle([...currentWords]);
+            const engWords = shuffle([...currentWords]);
+
+            if (hebrewCol) hebrewCol.innerHTML = hebWords.map(item => `<button onclick="selectMatchCard('he', '${item.en.replace(/'/g, "\\'")}', this)" class="match-card-heb w-full p-2.5 sm:p-3 bg-white hover:bg-indigo-50 border-2 border-slate-200 rounded-2xl text-slate-800 font-extrabold text-xs shadow-sm text-center flex items-center justify-center min-h-[46px]">${item.he}</button>`).join('');
+            if (englishCol) englishCol.innerHTML = engWords.map(item => `<button onclick="selectMatchCard('en', '${item.en.replace(/'/g, "\\'")}', this)" class="match-card-eng w-full p-2.5 sm:p-3 bg-white hover:bg-indigo-50 border-2 border-slate-200 rounded-2xl text-slate-800 font-extrabold text-xs shadow-sm text-center flex items-center justify-center min-h-[46px]" dir="ltr">${getDisplayEnglish(item)}</button>`).join('');
+        }
+
+        function selectMatchCard(type, enValue, element) {
+            if (element.classList.contains('matched') || element.disabled) return;
+            playSound('click');
+
+            const baseCardClass = `match-card-${type} w-full p-2.5 sm:p-3 rounded-2xl font-extrabold text-xs shadow-sm text-center flex items-center justify-center min-h-[46px] border-2 `;
+
+            if (type === 'he') {
+                document.querySelectorAll('.match-card-heb').forEach(btn => {
+                    if (!btn.classList.contains('matched')) {
+                        btn.className = baseCardClass + 'border-slate-200 bg-white text-slate-800 hover:bg-indigo-50';
+                    }
+                });
+                element.className = baseCardClass + 'border-indigo-600 bg-indigo-100 text-indigo-900';
+                selectedHebrewCard = { en: enValue, el: element };
+            } else {
+                document.querySelectorAll('.match-card-eng').forEach(btn => {
+                    if (!btn.classList.contains('matched')) {
+                        btn.className = baseCardClass + 'border-slate-200 bg-white text-slate-800 hover:bg-indigo-50';
+                    }
+                });
+                element.className = baseCardClass + 'border-indigo-600 bg-indigo-100 text-indigo-900';
+                selectedEnglishCard = { en: enValue, el: element };
+            }
+
+            if (selectedHebrewCard && selectedEnglishCard) {
+                if (selectedHebrewCard.en === selectedEnglishCard.en) {
+                    playSound('correct'); speakText(selectedHebrewCard.en);
+                    const hebEl = selectedHebrewCard.el;
+                    const engEl = selectedEnglishCard.el;
+                    hebEl.className = 'match-card-heb matched w-full p-2.5 sm:p-3 rounded-2xl font-extrabold text-xs shadow-sm text-center flex items-center justify-center min-h-[46px] border-2 bg-emerald-100 border-emerald-500 text-emerald-900 opacity-50 pointer-events-none';
+                    engEl.className = 'match-card-eng matched w-full p-2.5 sm:p-3 rounded-2xl font-extrabold text-xs shadow-sm text-center flex items-center justify-center min-h-[46px] border-2 bg-emerald-100 border-emerald-500 text-emerald-900 opacity-50 pointer-events-none';
+                    hebEl.disabled = true; engEl.disabled = true;
+                    selectedHebrewCard = null; selectedEnglishCard = null;
+                    totalMatchedPairsAllRounds++;
+                    document.getElementById('match-score-badge').innerText = `זוגות: ${totalMatchedPairsAllRounds}`;
+
+                    if (document.querySelectorAll('.matched').length / 2 === matchRounds[currentMatchRoundIndex].length) {
+                        setTimeout(() => {
+                            currentMatchRoundIndex++;
+                            if (currentMatchRoundIndex < matchRounds.length) loadMatchRound(currentMatchRoundIndex);
+                            else showMatchCompletion();
+                        }, 600);
+                    }
+                } else {
+                    playSound('wrong');
+                    const hebEl = selectedHebrewCard.el;
+                    const engEl = selectedEnglishCard.el;
+                    hebEl.className = 'match-card-heb w-full p-2.5 sm:p-3 rounded-2xl font-extrabold text-xs shadow-sm text-center flex items-center justify-center min-h-[46px] border-2 animate-shake border-rose-500 bg-rose-50 text-rose-900';
+                    engEl.className = 'match-card-eng w-full p-2.5 sm:p-3 rounded-2xl font-extrabold text-xs shadow-sm text-center flex items-center justify-center min-h-[46px] border-2 animate-shake border-rose-500 bg-rose-50 text-rose-900';
+                    setTimeout(() => {
+                        hebEl.className = 'match-card-heb w-full p-2.5 sm:p-3 rounded-2xl font-extrabold text-xs shadow-sm text-center flex items-center justify-center min-h-[46px] border-2 border-slate-200 bg-white text-slate-800 hover:bg-indigo-50';
+                        engEl.className = 'match-card-eng w-full p-2.5 sm:p-3 rounded-2xl font-extrabold text-xs shadow-sm text-center flex items-center justify-center min-h-[46px] border-2 border-slate-200 bg-white text-slate-800 hover:bg-indigo-50';
+                        selectedHebrewCard = null; selectedEnglishCard = null;
+                    }, 500);
+                }
+            }
+        }
+
+        function showMatchCompletion() {
+            playSound('correct'); triggerConfetti();
+            document.getElementById('matching-board-wrapper')?.classList.add('hidden');
+            const compScreen = document.getElementById('match-completion-screen');
+            if (compScreen) {
+                compScreen.classList.remove('hidden');
+                document.getElementById('match-final-score').innerText = `התאמת בהצלחה את כל ${totalMatchedPairsAllRounds} הזוגות!`;
+            }
+        }
+
+        function initQuiz(pool) {
+            quizIndex = 0; quizScore = 0; questionAttempts = 0; mistakeWords = []; quizHistory = [];
+            activeWordPool = shuffle([...(pool || activeWordPool)]);
+            document.getElementById('quiz-screen')?.classList.remove('hidden');
+            document.getElementById('completion-screen')?.classList.add('hidden');
+            renderQuizQuestion();
+        }
+
+        function renderQuizQuestion() {
+            if (quizIndex >= activeWordPool.length) { showQuizCompletion(); return; }
+            questionAttempts = 0;
+            const current = activeWordPool[quizIndex];
+            document.getElementById('question-hebrew').innerText = current.he;
+            const userInput = document.getElementById('user-input');
+            if (userInput) {
+                userInput.value = (quizHistory[quizIndex]?.userText && quizHistory[quizIndex]?.userText !== '(דולג)') ? quizHistory[quizIndex].userText : '';
+                userInput.disabled = false;
+                if (document.getElementById('auth-screen')?.classList.contains('hidden')) {
+                    userInput.focus();
+                }
+            }
+            document.getElementById('feedback-box')?.classList.add('hidden');
+            document.getElementById('post-answer-controls')?.classList.add('hidden');
+            const submitBtn = document.getElementById('submit-btn');
+            if (submitBtn) submitBtn.disabled = false;
+
+            const prevFixBtn = document.getElementById('prev-fix-btn');
+            if (prevFixBtn) prevFixBtn.classList.toggle('hidden', quizIndex < 1 || appSettings.hideFeedback);
+            updateQuizBadges();
+        }
+
+        function updateQuizBadges() {
+            const scoreBadge = document.getElementById('score-badge');
+            if (scoreBadge) {
+                scoreBadge.style.display = appSettings.hideFeedback ? 'none' : 'inline-block';
+                scoreBadge.innerHTML = `ניקוד: <span dir="ltr" class="inline-block font-bold">${quizScore} / ${activeWordPool.length * 5}</span>`;
+            }
+            document.getElementById('progress-badge').innerHTML = `<span dir="ltr" class="inline-block font-bold">${quizIndex + 1} / ${activeWordPool.length}</span>`;
+        }
+
+        function validateQuizInput() {
+            const userInput = document.getElementById('user-input');
+            const warning = document.getElementById('input-warning');
+            if (!userInput || !warning) return;
+            const letters = (userInput.value.match(/[a-zA-Z]/g) || []).length;
+            warning.classList.toggle('hidden', userInput.value.length === 0 || letters >= 2);
+        }
+
+        function appendPosTag(tag) {
+            playSound('click');
+            const userInput = document.getElementById('user-input');
+            if (!userInput) return;
+            let val = userInput.value.trim().replace(/\s*\((v|n|adj|exp|adv)\)$/i, '');
+            userInput.value = `${val} (${tag})`.trim();
+            validateQuizInput();
+            userInput.focus();
+        }
+
+        let activeSpeechRecognition = null;
+        let isMicListening = false;
+
+        function setMicVisualState(listening) {
+            isMicListening = listening;
+            const micBtn = document.getElementById('mic-btn');
+            const statusMsg = document.getElementById('mic-status-msg');
+            if (!micBtn) return;
+            if (listening) {
+                micBtn.className = "absolute left-2 p-2 rounded-xl bg-rose-600 text-white border border-rose-700 flex items-center justify-center shadow-md animate-pulse";
+                if (statusMsg) {
+                    statusMsg.innerText = "🎙️ מקשיב... אמור את המילה באנגלית ואת חלק הדיבור (למשל: omelet noun)";
+                    statusMsg.className = "text-[11px] text-rose-600 font-bold mt-1 text-right";
+                    statusMsg.classList.remove('hidden');
+                }
+            } else {
+                micBtn.className = "absolute left-2 p-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 flex items-center justify-center shadow-sm";
+                if (statusMsg) statusMsg.classList.add('hidden');
+            }
+        }
+
+        function formatSpokenAnswer(transcript) {
+            let cleaned = (transcript || '')
+                .toLowerCase()
+                .replace(/[.,!?;:"'()\[\]{}]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            const posMap = [
+                { regex: /\b(expression|exp)\s*$/i, tag: 'exp' },
+                { regex: /\b(adjective|adj)\s*$/i, tag: 'adj' },
+                { regex: /\b(adverb|adv)\s*$/i, tag: 'adv' },
+                { regex: /\b(noun|known|none|now)\s*$/i, tag: 'n' },
+                { regex: /\b(verb|v)\s*$/i, tag: 'v' }
+            ];
+
+            for (const item of posMap) {
+                if (item.regex.test(cleaned)) {
+                    const wordPart = cleaned.replace(item.regex, '').trim();
+                    if (wordPart.length > 0) {
+                        return `${wordPart} (${item.tag})`;
+                    }
+                }
+            }
+            return cleaned;
+        }
+
+        function toggleSpeechRecognition() {
+            const userInput = document.getElementById('user-input');
+            if (userInput && userInput.disabled) return;
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const statusMsg = document.getElementById('mic-status-msg');
+
+            if (!SpeechRecognition) {
+                playSound('wrong');
+                if (statusMsg) {
+                    statusMsg.innerText = "⚠️ הדפדפן שלך אינו תומך בזיהוי דיבור קולי (מומלץ להשתמש ב-Chrome).";
+                    statusMsg.className = "text-[11px] text-rose-600 font-bold mt-1 text-right";
+                    statusMsg.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (isMicListening && activeSpeechRecognition) {
+                activeSpeechRecognition.stop();
+                setMicVisualState(false);
+                return;
+            }
+
+            playSound('click');
+            const recognition = new SpeechRecognition();
+            activeSpeechRecognition = recognition;
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.onstart = function() {
+                setMicVisualState(true);
+            };
+
+            recognition.onresult = function(event) {
+                const spokenText = event.results[0][0].transcript;
+                const formatted = formatSpokenAnswer(spokenText);
+                if (userInput) {
+                    userInput.value = formatted;
+                    validateQuizInput();
+                    userInput.focus();
+                }
+                playSound('click');
+            };
+
+            recognition.onerror = function(event) {
+                setMicVisualState(false);
+                if (statusMsg && event.error !== 'aborted') {
+                    statusMsg.innerText = "⚠️ לא זוהה דיבור או שאין הרשאת מיקרופון, נסה שוב.";
+                    statusMsg.className = "text-[11px] text-rose-600 font-bold mt-1 text-right";
+                    statusMsg.classList.remove('hidden');
+                }
+            };
+
+            recognition.onend = function() {
+                setMicVisualState(false);
+                activeSpeechRecognition = null;
+            };
+
+            try {
+                recognition.start();
+            } catch (e) {
+                setMicVisualState(false);
+            }
+        }
+
+        function calcLevenshtein(a, b) {
+            const matrix = [];
+            for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+            for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    matrix[i][j] = b.charAt(i - 1) === a.charAt(j - 1)
+                        ? matrix[i - 1][j - 1]
+                        : Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1);
+                }
+            }
+            return matrix[b.length][a.length];
+        }
+
+        function normalizeText(str) {
+            return (str || '').toLowerCase().replace(/['`]/g, '').replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+
+        function handleAnswer(e) {
+            if (e) e.preventDefault();
+            if (isMicListening && activeSpeechRecognition) {
+                activeSpeechRecognition.stop();
+                setMicVisualState(false);
+            }
+
+            const postControls = document.getElementById('post-answer-controls');
+            if (postControls && !postControls.classList.contains('hidden')) { nextQuestion(); return; }
+
+            const userInput = document.getElementById('user-input');
+            if (!userInput || !userInput.value.trim()) return;
+
+            const current = activeWordPool[quizIndex];
+            const rawUser = userInput.value.trim();
+            const cleanUser = rawUser.toLowerCase();
+            const posMatch = cleanUser.match(/\((v|n|adj|exp|adv)\)$/i);
+            const userPosTag = posMatch ? posMatch[1].toLowerCase() : null;
+            const textWithoutPos = cleanUser.replace(/\s*\((v|n|adj|exp|adv)\)$/i, '').trim();
+
+            const targetClean = normalizeText(current.en);
+            const userClean = normalizeText(textWithoutPos);
+            const targetPos = (current.pos || '').trim().toLowerCase();
+            const letterMistakes = calcLevenshtein(userClean, targetClean);
+
+            userState.totalAnswers++;
+            let points = 5;
+            let isCorrect = (userClean === targetClean) || (userClean.length >= 2 && targetClean.includes(userClean)) || letterMistakes <= 4;
+            if (!isCorrect) points = 0;
+            else {
+                if (appSettings.showPos && (!userPosTag || userPosTag !== targetPos)) points -= 2;
+                points -= letterMistakes;
+                if (points < 0) points = 0;
+            }
+
+            const previousEarnedScore = quizHistory[quizIndex]?.pointsEarned || 0;
+            quizScore = quizScore - previousEarnedScore + points;
+            quizHistory[quizIndex] = { word: current, userText: rawUser, pointsEarned: points, maxPoints: 5, letterMistakes, userPosTag, targetPos };
+
+            const feedbackBox = document.getElementById('feedback-box');
+            const submitBtn = document.getElementById('submit-btn');
+
+            let detailsMsg = [];
+            if (appSettings.showPos) {
+                if (!userPosTag) detailsMsg.push('חסר חלק דיבור (-2 נק)');
+                else if (userPosTag !== targetPos) detailsMsg.push('חלק דיבור שגוי (-2 נק)');
+            }
+            if (letterMistakes > 0) detailsMsg.push(`טעויות באותיות: ${letterMistakes} (-${letterMistakes} נק)`);
+
+            if (points > 0) {
+                playSound('correct'); userState.correctAnswers++; updateStreak(true);
+                if (appSettings.hideFeedback) { nextQuestion(); return; }
+                if (feedbackBox) {
+                    feedbackBox.className = "p-3 rounded-2xl text-center font-bold text-xs bg-emerald-50 text-emerald-800 border-emerald-300 border animate-pop-up";
+                    feedbackBox.innerText = `✨ תשובה נכונה! קיבלת ${points} נקודות. ${detailsMsg.length ? '(' + detailsMsg.join(', ') + ')' : ''}`;
+                    feedbackBox.classList.remove('hidden');
+                }
+                userInput.disabled = true; if (submitBtn) submitBtn.disabled = true;
+                if (appSettings.autoAdvance) setTimeout(nextQuestion, 1000);
+                else postControls?.classList.remove('hidden');
+            } else {
+                playSound('wrong'); updateStreak(false);
+                if (!mistakeWords.includes(current)) mistakeWords.push(current);
+                if (appSettings.hideFeedback) {
+                    userInput.classList.add('animate-shake');
+                    setTimeout(() => { userInput.classList.remove('animate-shake'); nextQuestion(); }, 300);
+                    return;
+                }
+                if (feedbackBox) {
+                    feedbackBox.className = "p-3 rounded-2xl text-center font-bold text-xs bg-rose-50 text-rose-800 border-rose-300 border animate-pop-up";
+                    feedbackBox.innerText = `❌ תשובה לא נכונה! קיבלת 0 נקודות. ${detailsMsg.length ? '(' + detailsMsg.join(', ') + ')' : ''}`;
+                    feedbackBox.classList.remove('hidden');
+                }
+                userInput.disabled = true; if (submitBtn) submitBtn.disabled = true;
+                if (appSettings.autoAdvance) setTimeout(nextQuestion, 1800);
+                else postControls?.classList.remove('hidden');
+            }
+            updateQuizBadges();
+        }
+
+        function fixPreviousQuestion() {
+            if (quizIndex < 1 || appSettings.hideFeedback) return;
+            playSound('click'); quizIndex--; renderQuizQuestion();
+        }
+
+        function skipQuestion() {
+            playSound('click');
+            const current = activeWordPool[quizIndex];
+            if (!mistakeWords.includes(current)) mistakeWords.push(current);
+            updateStreak(false); userState.totalAnswers++;
+            quizHistory[quizIndex] = { word: current, userText: '(דולג)', pointsEarned: 0, maxPoints: 5, skipped: true };
+            nextQuestion();
+        }
+
+        function speakQuizAnswer() { speakText(activeWordPool[quizIndex]?.en, currentQuizSpeechRate); }
+        function changeQuizSpeechRate(e) { currentQuizSpeechRate = parseFloat(e.target.value); speakQuizAnswer(); }
+        function nextQuestion() { quizIndex++; renderQuizQuestion(); }
+
+        function showQuizCompletion() {
+            playSound('correct'); triggerConfetti();
+            document.getElementById('quiz-screen')?.classList.add('hidden');
+            document.getElementById('completion-screen')?.classList.remove('hidden');
+
+            const maxScore = activeWordPool.length * 5;
+            const totalLost = maxScore - quizScore;
+            const percentage = maxScore > 0 ? ((quizScore / maxScore) * 100).toFixed(2) : '0.00';
+            document.getElementById('score-summary').innerHTML = `
+                <div>הניקוד המדויק שלך: <span class="font-black text-indigo-700 text-base">${quizScore}</span> מתוך <span class="font-bold">${maxScore}</span> נקודות</div>
+                <div class="text-xs font-bold text-indigo-600" dir="ltr">(${percentage}%)</div>
+                <div class="text-[11px] font-semibold ${totalLost === 0 ? 'text-emerald-700' : 'text-rose-600'}">
+                    ${totalLost === 0 ? '🎉 מושלם! לא ירדו לך נקודות כלל.' : `📉 סה"כ ירדו לך ${totalLost} נקודות בחידון זה.`}
+                </div>
+            `;
+
+            document.getElementById('bank-checkboxes-container').innerHTML = Object.keys(wordBanks).map(k => `<label class="flex items-center gap-1 text-[11px] font-bold text-slate-700 cursor-pointer"><input type="checkbox" value="${k}" class="quiz-bank-checkbox accent-indigo-600" ${k === selectedBankKey ? 'checked' : ''} /><span>${wordBanks[k].name}</span></label>`).join('');
+
+            const mistakesActionContainer = document.getElementById('mistakes-action-container');
+            const mistakesReview = document.getElementById('mistakes-review');
+
+            const imperfectQuestions = quizHistory
+                .map((h, idx) => ({ ...h, questionNum: idx + 1 }))
+                .filter(h => (h.maxPoints - h.pointsEarned) > 0);
+
+            let detailedReviewHtml = '';
+            if (imperfectQuestions.length === 0) {
+                detailedReviewHtml = `<div class="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-center">🏆 ענית נכון ובאופן מלא על כל השאלות!</div>`;
+            } else {
+                detailedReviewHtml = `<div class="space-y-2 mt-2"><h4 class="font-bold text-xs text-slate-800">📊 פירוט שאלות שבהן ירדו נקודות (${imperfectQuestions.length}):</h4>`;
+                imperfectQuestions.forEach(h => {
+                    const lostPts = h.maxPoints - h.pointsEarned;
+                    const isZero = h.pointsEarned === 0;
+                    const cardStyle = isZero ? 'bg-rose-50 border-rose-200 text-rose-950' : 'bg-amber-50 border-amber-200 text-amber-950';
+                    const badgeStyle = isZero ? 'bg-rose-200 text-rose-900' : 'bg-amber-200 text-amber-900';
+
+                    let reasonText = '';
+                    if (h.skipped) {
+                        reasonText = 'דילגת על השאלה (-5 נק\')';
+                    } else if (isZero) {
+                        reasonText = 'תשובה שגויה (-5 נק\')';
+                    } else {
+                        let reasons = [];
+                        if (appSettings.showPos && (!h.userPosTag || h.userPosTag !== h.targetPos)) {
+                            reasons.push(!h.userPosTag ? 'חסר חלק דיבור (-2 נק\')' : 'חלק דיבור שגוי (-2 נק\')');
+                        }
+                        if (h.letterMistakes > 0) {
+                            reasons.push(`${h.letterMistakes} טעויות כתיב (-${h.letterMistakes} נק\')`);
+                        }
+                        reasonText = reasons.join(' | ');
+                    }
+
+                    detailedReviewHtml += `
+                        <div class="p-2.5 rounded-2xl border ${cardStyle} text-xs space-y-1 shadow-sm">
+                            <div class="flex justify-between items-center font-bold">
+                                <span>שאלה ${h.questionNum}: <span class="underline">${h.word.he}</span></span>
+                                <span class="px-2 py-0.5 rounded-lg text-[11px] font-black ${badgeStyle}">ירדו ${lostPts} נק' (${h.pointsEarned}/5)</span>
+                            </div>
+                            <div class="text-[11px] flex flex-wrap justify-between gap-2 pt-0.5">
+                                <span>התשובה שלך: <strong dir="ltr" class="inline-block font-mono">${h.userText}</strong></span>
+                                <span>התשובה הנכונה: <strong dir="ltr" class="inline-block font-mono text-emerald-700">${getDisplayEnglish(h.word)}</strong></span>
+                            </div>
+                            <div class="text-[10px] font-bold opacity-85">⚠️ פירוט הורדה: ${reasonText}</div>
+                        </div>
+                    `;
+                });
+                detailedReviewHtml += `</div>`;
+            }
+
+            if (mistakeWords.length > 0) {
+                if (mistakesActionContainer) mistakesActionContainer.innerHTML = `<button onclick="practiceMistakesOnly()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 rounded-2xl shadow-md text-xs">🎯 תרגל מחדש רק את ${mistakeWords.length} המילים שטעית בהן</button>`;
+            } else {
+                if (mistakesActionContainer) mistakesActionContainer.innerHTML = '';
+            }
+            if (mistakesReview) mistakesReview.innerHTML = detailedReviewHtml;
+        }
+
+        function practiceMistakesOnly() { playSound('click'); activeWordPool = [...mistakeWords]; updateSubsetBanner(); initQuiz(activeWordPool); }
+        function startCustomBankQuizFromCompletion() {
+            playSound('click');
+            const checkboxes = document.querySelectorAll('.quiz-bank-checkbox:checked');
+            let combined = [];
+            checkboxes.forEach(cb => { if (wordBanks[cb.value]) combined = combined.concat(wordBanks[cb.value].words); });
+            activeWordPool = combined.length > 0 ? combined : getWordsForCategoryKey(selectedCategoryKey);
+            updateSubsetBanner();
+            initQuiz(activeWordPool);
+        }
+
+        function startTimeAttackGame() {
+            playSound('click'); timeScore = 0;
+            document.getElementById('time-start-card')?.classList.add('hidden');
+            document.getElementById('time-play-card')?.classList.remove('hidden');
+            let secondsLeft = 60;
+            document.getElementById('time-clock').innerText = `⏱️ 60s`;
+            document.getElementById('time-score').innerText = `תשובות נכונות: 0`;
+            renderTimeAttackQuestion();
+            timeAttackTimer = setInterval(() => {
+                secondsLeft--;
+                document.getElementById('time-clock').innerText = `⏱️ ${secondsLeft}s`;
+                if (secondsLeft <= 0) { clearInterval(timeAttackTimer); timeAttackTimer = null; finishTimeAttack(); }
+            }, 1000);
+        }
+
+        function renderTimeAttackQuestion() {
+            timeCurrentWord = activeWordPool[Math.floor(Math.random() * activeWordPool.length)];
+            document.getElementById('time-word-hebrew').innerText = timeCurrentWord.he;
+            let dist = shuffle(activeWordPool.filter(w => w.en !== timeCurrentWord.en)).slice(0, 3);
+            let options = shuffle([timeCurrentWord, ...dist]);
+            document.getElementById('time-options-grid').innerHTML = options.map(opt => `<button onclick="handleTimeOptionSelect('${opt.en.replace(/'/g, "\\'")}')" class="p-3 bg-white hover:bg-amber-50 border-2 border-slate-200 hover:border-amber-400 rounded-2xl text-slate-800 font-extrabold text-xs shadow-sm text-center dir-ltr">${getDisplayEnglish(opt)}</button>`).join('');
+        }
+
+        function handleTimeOptionSelect(selectedEn) {
+            if (selectedEn === timeCurrentWord.en) {
+                playSound('correct'); timeScore++;
+                document.getElementById('time-score').innerText = `תשובות נכונות: ${timeScore}`;
+            } else { playSound('wrong'); }
+            renderTimeAttackQuestion();
+        }
+
+        function finishTimeAttack() {
+            playSound('correct'); triggerConfetti();
+            document.getElementById('time-play-card')?.classList.add('hidden');
+            document.getElementById('time-start-card')?.classList.remove('hidden');
+        }
+
+        function initListeningQuiz(pool) {
+            listenIndex = 0;
+            activeWordPool = shuffle([...(pool || activeWordPool)]);
+            renderListeningQuestion();
+        }
+
+        function renderListeningQuestion() {
+            if (listenIndex >= activeWordPool.length) { playSound('correct'); triggerConfetti(); listenIndex = 0; }
+            listenCurrentWord = activeWordPool[listenIndex];
+            document.getElementById('listen-score-badge').innerText = `שאלה ${listenIndex + 1} / ${activeWordPool.length}`;
+            speakText(listenCurrentWord.en);
+            let dist = shuffle(activeWordPool.filter(w => w.en !== listenCurrentWord.en)).slice(0, 3);
+            let options = shuffle([listenCurrentWord, ...dist]);
+            document.getElementById('listen-options-grid').innerHTML = options.map(opt => `<button onclick="handleListenOptionSelect('${opt.en.replace(/'/g, "\\'")}')" class="p-3 bg-white hover:bg-teal-50 border-2 border-slate-200 hover:border-teal-400 rounded-2xl text-slate-800 font-extrabold text-xs shadow-sm text-center">${opt.he}</button>`).join('');
+        }
+
+        function playCurrentListenAudio() { if (listenCurrentWord) speakText(listenCurrentWord.en); }
+        function handleListenOptionSelect(selectedEn) {
+            if (selectedEn === listenCurrentWord.en) { playSound('correct'); listenIndex++; renderListeningQuestion(); }
+            else playSound('wrong');
+        }
+
+        function initStudyMode(pool) {
+            studyIndex = 0;
+            renderStudyCard();
+            renderStudyWordGrid();
+        }
+
+        function renderStudyCard() {
+            const current = activeWordPool[studyIndex];
+            document.getElementById('flashcard-inner')?.classList.remove('rotate-y-180');
+            document.getElementById('card-counter').innerText = `${studyIndex + 1} מתוך ${activeWordPool.length}`;
+            document.getElementById('card-hebrew').innerText = current.he;
+            document.getElementById('card-english').innerText = getDisplayEnglish(current);
+            document.getElementById('card-phonetic').innerText = `[${current.phonetic || ''}]`;
+            document.getElementById('card-example').innerText = `"${current.example || ''}"`;
+            updateStudyCardFavoriteBtn();
+        }
+
+        function flipCard() { playSound('click'); document.getElementById('flashcard-inner')?.classList.toggle('rotate-y-180'); }
+        function speakEnglishWord(e) { e?.stopPropagation(); speakText(activeWordPool[studyIndex]?.en); }
+        function prevCard() { playSound('click'); studyIndex = (studyIndex - 1 + activeWordPool.length) % activeWordPool.length; renderStudyCard(); }
+        function nextCard() { playSound('click'); studyIndex = (studyIndex + 1) % activeWordPool.length; renderStudyCard(); }
+        function shuffleStudyCards() { playSound('click'); activeWordPool = shuffle(activeWordPool); studyIndex = 0; renderStudyCard(); renderStudyWordGrid(); }
+
+        function toggleAutoPlayStudy() {
+            playSound('click');
+            const btn = document.getElementById('autoplay-btn');
+            if (autoPlayInterval) {
+                clearInterval(autoPlayInterval); autoPlayInterval = null;
+                if (btn) btn.innerText = '▶️ מצג';
+            } else {
+                if (btn) btn.innerText = '⏹️ עוצר';
+                autoPlayInterval = setInterval(() => { flipCard(); setTimeout(nextCard, 2000); }, 4000);
+            }
+        }
+
+        function renderStudyWordGrid() {
+            const grid = document.getElementById('word-list-grid');
+            if (!grid) return;
+            grid.innerHTML = activeWordPool.map((item, idx) => `<button onclick="selectStudyCardIndex(${idx})" class="p-2 text-[11px] font-bold rounded-xl border ${idx === studyIndex ? 'bg-purple-600 text-white border-purple-700' : 'bg-slate-50 text-slate-800 border-slate-200 hover:bg-slate-100'} truncate">${item.he} - ${item.en}</button>`).join('');
+        }
+
+        function selectStudyCardIndex(idx) { playSound('click'); studyIndex = idx; renderStudyCard(); renderStudyWordGrid(); }
+
+        function renderProfileStats() {
+            document.getElementById('stat-best-streak').innerText = userState.bestStreak || 0;
+            const accVal = userState.totalAnswers > 0 ? Math.round((userState.correctAnswers / userState.totalAnswers) * 100) : 0;
+            document.getElementById('stat-accuracy').innerText = `${accVal}%`;
+            document.getElementById('stat-total-words').innerText = activeWordPool.length;
+
+            const weakList = document.getElementById('stats-weak-words-list');
+            if (weakList) {
+                weakList.innerHTML = mistakeWords.length === 0 ? `<p class="text-[11px] text-slate-500 font-bold py-1.5">אין מילים חלשות כרגע!</p>` : mistakeWords.map(m => `<div class="p-2 bg-rose-50 border border-rose-200 rounded-xl text-xs flex justify-between items-center"><span class="font-bold text-slate-800">${m.he}</span><span class="font-bold text-indigo-700 dir-ltr">${getDisplayEnglish(m)}</span></div>`).join('');
+            }
+        }
+
+        function renderWordsTab() {
+            document.getElementById('total-words-count-badge').innerText = `${activeWordPool.length} מילים`;
+            const list = document.getElementById('custom-words-list');
+            if (list) {
+                list.innerHTML = activeWordPool.map(w => {
+                    const isFav = favoriteWords.some(fw => fw.en === w.en && fw.he === w.he);
+                    return `<div class="p-2 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs hover:bg-slate-100"><div class="flex items-center gap-1.5"><button onclick="toggleFavoriteWord('${w.he.replace(/'/g, "\\'")}', '${w.en.replace(/'/g, "\\'")}')" class="p-1 text-sm">${isFav ? '⭐' : '☆'}</button><button onclick="speakText('${w.en.replace(/'/g, "\\'")}')" class="p-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg">🔊</button><span class="font-bold text-slate-900">${w.he}</span></div><div class="text-right"><span class="font-bold text-indigo-700 dir-ltr block text-xs">${getDisplayEnglish(w)}</span><span class="text-[9px] text-slate-500 font-mono">${w.phonetic || ''}</span></div></div>`;
+                }).join('');
+            }
+        }
+
+        function openSettingsModal() {
+            playSound('click');
+            document.getElementById('setting-bg-color').value = appSettings.bgColor || 'cyan';
+            document.getElementById('setting-show-pos').value = appSettings.showPos ? 'yes' : 'no';
+            document.getElementById('setting-hide-feedback').value = appSettings.hideFeedback ? 'yes' : 'no';
+            document.getElementById('setting-sfx').value = userState.sfxEnabled ? 'yes' : 'no';
+            document.getElementById('setting-auto-advance').value = appSettings.autoAdvance ? 'yes' : 'no';
+            document.getElementById('settings-modal')?.classList.remove('hidden');
+        }
+
+        function closeSettingsModal() { document.getElementById('settings-modal')?.classList.add('hidden'); }
+
+        function updateSettingsFromUI() {
+            appSettings.bgColor = document.getElementById('setting-bg-color').value;
+            appSettings.showPos = document.getElementById('setting-show-pos').value === 'yes';
+            appSettings.hideFeedback = document.getElementById('setting-hide-feedback').value === 'yes';
+            userState.sfxEnabled = document.getElementById('setting-sfx').value === 'yes';
+            appSettings.autoAdvance = document.getElementById('setting-auto-advance').value === 'yes';
+            applyTheme(); saveUserState(); updateHeaderUI();
+            updateQuizBadges();
+            const prevFixBtn = document.getElementById('prev-fix-btn');
+            if (prevFixBtn) prevFixBtn.classList.toggle('hidden', quizIndex < 1 || appSettings.hideFeedback);
+        }
+
+        window.addEventListener('keydown', function(e) {
+            if (currentTab !== 'assemble') return;
+            const tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+            if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+            if (['share-modal', 'settings-modal', 'help-modal', 'auth-screen'].some(id => !document.getElementById(id)?.classList.contains('hidden'))) return;
+            const key = e.key.toLowerCase();
+            if (/^[a-z]$/.test(key)) { e.preventDefault(); guessHangmanLetter(key); }
+        });
+
+        window.onload = function() {
+            loadUserState(); applyTheme(); updateHeaderUI();
+            selectedBankKey = '5'; updateCategoryOptionsForBank('5'); selectedCategoryKey = 'all';
+            document.getElementById('global-bank-select').value = '5';
+            document.getElementById('global-category-select').value = 'all';
+            activeWordPool = getWordsForCategoryKey('all');
+            initQuiz(activeWordPool);
+        };
+    </script>
+</body>
+</html>
